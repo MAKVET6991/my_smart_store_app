@@ -59,11 +59,11 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة مخزن الغرف المتعددة والميكروفون بشكل مستقر
-if "chat_rooms" not in st.session_state:
-    st.session_state.chat_rooms = {"محادثة افتراضية 1": []}
-if "active_room" not in st.session_state:
-    st.session_state.active_room = "محادثة افتراضية 1"
+# تهيئة مخزن الغرف المتعددة وضمان وجود غرفة رئيسية مفتوحة تلقائياً دائماً
+if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
+    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
+if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
+    st.session_state.active_room = "المحادثة الرئيسية 🌟"
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
@@ -177,11 +177,10 @@ else:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # القائمة الجانبية الذكية (Sidebar)
+        # القائمة الجانبية الذكية والثابتة (Sidebar)
         with st.sidebar:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة المباشرة بدون معوقات مسافات
+            # ميزة الغرف المتعددة المباشرة والآمنة
             st.markdown("### 🗂️ غرف المحادثة الحالية")
-            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
