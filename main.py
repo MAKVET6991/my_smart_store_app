@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر
+# تنسيق المظهر العصري المريح للنظر
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -30,8 +30,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# إعداد مفتاح Stripe من الـ Secrets
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
+# دالة التعامل مع قاعدة بيانات Supabase عبر REST API
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     url = f"{st.secrets['SUPABASE_URL']}/rest/v1/{endpoint}"
     headers = {
@@ -47,10 +49,16 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
             response = requests.post(url, headers=headers, json=json_data)
         elif method == "PATCH":
             response = requests.patch(url, headers=headers, json=json_data, params=params)
-        return response.json()
+        
+        # إذا كانت الاستجابة قائمة وبها عناصر، نرجع العنصر الأول تسهيلاً للتعامل
+        res_json = response.json()
+        if isinstance(res_json, list) and len(res_json) > 0:
+            return res_json[0]
+        return res_json
     except Exception as e:
-        return []
+        return None
 
+# تهيئة متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -89,11 +97,10 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
-                if user_data and user_data["password_hash"] == password_input:
+                if user_data and user_data.get("password_hash") == password_input:
                     st.session_state.logged_in = True
                     st.session_state.username = username_input
                     
-                    # معالجة آمنة ومباشرة للوقت لمنع تعليق الحسابات الجديدة
                     try:
                         trial_end_str = user_data.get("trial_end_date")
                         if trial_end_str:
@@ -106,7 +113,6 @@ if not st.session_state.logged_in:
                     except:
                         st.session_state.days_left = 7
                     
-                    # تفعيل الحساب تلقائياً طالما في الـ 7 أيام
                     st.session_state.is_subscribed = True
                     st.success(f"مرحباً بك مجدداً {username_input}!")
                     st.rerun()
@@ -130,8 +136,8 @@ if not st.session_state.logged_in:
                 else:
                     try:
                         customer = stripe.Customer.create(description=f"User: {new_username}")
-                        # حفظ تاريخ تجربة افتراضي مباشر لتأمين قاعدة البيانات
                         future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                        
                         new_user_payload = {
                             "username": new_username,
                             "password_hash": new_password,
@@ -164,34 +170,40 @@ else:
         except:
             pass
 
-    if not st.session_state.is_subscribed and st.session_state.username != "admin":
-        st.title("💳 انتهت الفترة التجريبية المجانية")
-        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3></div>", unsafe_allow_html=True)
-        if payment_link_url:
-            st.markdown(f"<br><a href='{payment_link_url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
-    else:
-        st.title("💬 غرف المحادثات الاحترافية العالمية")
-        st.write(f"👤 الحساب الحالي: **{st.session_state.username}**")
+    # ---- إضافة الجزء الخاص بإدارة غرف المحادثة وتصحيح الخطأ (السطر 197 وما بعده) ----
+    st.sidebar.title("💬 غرف المحادثة")
+    
+    # نموذج إضافة غرفة جديدة
+    with st.sidebar.form("add_room_form", clear_on_submit=True):
+        r_title = st.text_input("اسم الغرفة الجديدة:").strip()
+        submit_room = st.form_submit_button("إضافة غرفة")
         
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        if submit_room and r_title:
+            # هنا تم حل مشكلة الـ IndentationError بإضافة الأسطر التابعة للشرط بشكل صحيح
+            if r_title not in st.session_state.chat_rooms:
+                st.session_state.chat_rooms[r_title] = []
+                st.session_state.active_room = r_title
+                st.success(f"تم إنشاء غرفة: {r_title}")
+                st.rerun()
+            else:
+                st.warning("هذه الغرفة موجودة بالفعل!")
 
-        if st.session_state.username == "admin":
-            st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
-            all_users = supabase_request("users_subscriptions", "GET")
-            if all_users:
-                user_list = ", ".join([f"{u['username']}({u['subscription_status']})" for u in all_users])
-                st.info(f"المشتركون في السيرفر حالياً: {user_list}")
+    # عرض الغرف الحالية والتحويل بينها
+    for room in list(st.session_state.chat_rooms.keys()):
+        if room == st.session_state.active_room:
+            st.sidebar.markdown(f'<div class="room-active">{room}</div>', unsafe_allow_html=True)
+        else:
+            if st.sidebar.button(room, key=f"btn_{room}", use_container_width=True):
+                st.session_state.active_room = room
+                st.rerun()
 
-        st.markdown("---")
-
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("### 🗂️ غرف المحادثة")
-            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
-            create_room_btn = st.button("أنشئ الغرفة الآن 🚀", use_container_width=True)
+    # واجهة المحادثة الرئيسية داخل الغرفة النشطة
+    st.title(f"🤖 {st.session_state.active_room}")
+    
+    # عرض الرسائل السابقة للغرفة النشطة
+    for msg in st.session_state.chat_rooms[st.session_state.active_room]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
             
-            if create_room_btn and room_input.strip():
-                r_title = room_input.strip()
-                if r_title not in st.session_state.chat_rooms:
+    # استقبال مدخلات المستخدم الجديدة
+    if not st.session_state.is_subscribed:
