@@ -83,11 +83,11 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 st.sidebar.title("📁 التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.markdown(f"👤 **الحساب:** {st.session_state.username}")
+    st.sidebar.markdown(f"👤 *الحساب:* {st.session_state.username}")
     if st.session_state.username == "admin":
-        st.sidebar.markdown("⭐ **الرتبة:** مسؤول النظام العام")
+        st.sidebar.markdown("⭐ *الرتبة:* مسؤول النظام العام")
     else:
-        st.sidebar.markdown(f"⏳ المتبقي المالي: **{st.session_state.days_left}** يوم")
+        st.sidebar.markdown(f"⏳ المتبقي المالي: *{st.session_state.days_left}* يوم")
     
     st.sidebar.markdown("---")
     
@@ -190,14 +190,9 @@ else:
         
         # محاولة جلب البيانات الحقيقية بأمان من قاعدة البيانات
         all_users_resp = supabase_request("users_subscriptions", "GET")
-        
-        # حساب عدد المستخدمين المسجلين الفعلي أو عرض رقم افتراضي آمن لحماية الواجهة من الاختفاء
         total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
         
-        # عرض البطاقات الإحصائية بشكل دائم ومحمي لا يختفي أبداً
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.markdown(f'<div class="stat-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count}</h2></div>', unsafe_allow_html=True)
-        with c2:
-            st.markdown('<div class="stat-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
-        with c3:
+        # 🛠️ التعديل الجذري: عرض البطاقات بشكل مسطح مباشر ومضمون بدون تفريع لضمان اختفاء خطأ السطر 203 نهائياً
+        st.markdown(f'<div class="stat-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count}</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="stat-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="stat-box"><h3>⭐ تقييم التطبيق</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
