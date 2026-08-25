@@ -23,7 +23,6 @@ st.markdown("""
     .admin-box { padding: 12px; border-radius: 8px; background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; margin-top: 10px; }
     .trial-box { padding: 10px; border-radius: 8px; background-color: #fef3c7; border: 1px solid #fde68a; color: #92400e; margin-bottom: 15px; text-align: center; font-weight: bold; }
     .pay-box { padding: 20px; border-radius: 12px; background-color: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; text-align: center; }
-    .room-btn { margin-bottom: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -60,13 +59,15 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة مخزن الغرف المتعددة في الذاكرة الحالية
+# تهيئة مخزن الغرف المتعددة والميكروفون
 if "chat_rooms" not in st.session_state:
     st.session_state.chat_rooms = {"محادثة افتراضية 1": []}
 if "active_room" not in st.session_state:
     st.session_state.active_room = "محادثة افتراضية 1"
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
 
-# 3. شاشة إدارة الحسابات السحابية (تسجيل دخول / إنشاء حساب جديد)
+# 3. بوابة الوصول وإدارة الحسابات السحابية
 if not st.session_state.logged_in:
     st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
     st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
@@ -176,13 +177,12 @@ else:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # القائمة الجانبية المحدثة (Sidebar)
+        # القائمة الجانبية الذكية والمعدلة بالكامل (Sidebar)
         with st.sidebar:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة الجديدة (Multi-Chat Rooms)
+            # ميزة الغرف المتعددة المطورة بزر تفعيل مخصص (Multi-Chat Rooms)
             st.markdown("### 🗂️ غرف المحادثة الحالية")
             
-            # زر إنشاء غرفة محادثة جديدة
-            new_room_name = st.text_input("➕ اسم الغرفة الجديدة", placeholder="اكتب اسم الغرفة واضغط إنتر...")
+            with st.form("new_room_form", clear_on_submit=True):
