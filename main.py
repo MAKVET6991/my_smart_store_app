@@ -4,14 +4,14 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة بألوان زاهية ومشرقة
+# 1. إعداد عنوان وتصميم الصفحة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="centered"
 )
 
-# تنسيق المظهر العصري الزاهي والمبهج (Light Mode)
+# تنسيق المظهر العصري الزاهي والمبهج
 st.markdown("""
     <style>
     .stApp { background-color: #f8fafc; color: #1e293b; }
@@ -59,7 +59,7 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة مخزن الغرف المتعددة وضمان وجود غرفة رئيسية مفتوحة تلقائياً دائماً
+# تهيئة إجبارية وتلقائية للغرفة لمنع الشاشة الفارغة
 if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
     st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
@@ -140,11 +140,11 @@ if not st.session_state.logged_in:
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
 
-# 4. الشاشات بعد الدخول بنجاح (تفحص صلاحية الاشتراك)
+# 4. الشاشات بعد الدخول بنجاح
 else:
     if not st.session_state.is_subscribed:
         st.title("💳 انتهت الفترة التجريبية المجانية")
-        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3><p>يرجى الاشتراك لتفعيل الحساب ومتابعة استخدام ميزات المساعد الذكي ورفع الملفات الفائقة.</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3><p>يرجى الاشتراك لتفعيل الحساب ومتابعة استخدام ميزات المساعد الذكي.</p></div>", unsafe_allow_html=True)
         
         try:
             user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
@@ -167,8 +167,7 @@ else:
             st.rerun()
 
     else:
-        st.title("💬 غرف المحادثات الاحترافية العالمية")
-        
+        # عرض شريط التنبيه بالأيام المتبقية للمشتركين العاديين
         if st.session_state.username != "admin" and st.session_state.days_left > 0:
             st.markdown(f"<div class='trial-box'>⏱️ أنت الآن في الفترة التجريبية المجانية! متبقي لكِ: {st.session_state.days_left} أيام كاملة الميزات.</div>", unsafe_allow_html=True)
         elif st.session_state.username != "admin":
@@ -177,10 +176,11 @@ else:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # القائمة الجانبية الذكية والثابتة (Sidebar)
+        # القائمة الجانبية المستقرة
         with st.sidebar:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة المباشرة والآمنة
+            # ميزة الغرف المتعددة المبسطة
             st.markdown("### 🗂️ غرف المحادثة الحالية")
+            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
