@@ -11,10 +11,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مرن وواضح يدعم الثيم الفاتح والداكن معاً لضمان ظهور كافة النصوص
+# 2. تصميم مرن وواضح يدعم ظهور كافة النصوص وصناديق الكتابة بوضوح
 st.markdown("""
     <style>
-    /* تحسين النصوص لتكون واضحة وجذابة */
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
     p { text-align: center !important; color: #475569; }
     
@@ -141,13 +140,29 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                
+                # 🛠️ الحل الجذري والنهائي لقراءة الحسابات: تفكيك القائمة المسترجعة واستخراج قاموس المستخدم بأمان
+                user_data = None
+                if isinstance(res, list) and len(res) > 0:
+                    user_data = res[0]
+                elif isinstance(res, dict):
+                    user_data = res
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.session_state.is_subscribed = True
-                    st.session_state.days_left = 7
+                    
+                    try:
+                        trial_end_str = user_data.get("trial_end_date")
+                        if trial_end_str:
+                            trial_end = datetime.fromisoformat(trial_end_str.replace("Z", "+00:00"))
+                        else:
+                            trial_end = datetime.now(timezone.utc) + timedelta(days=7)
+                        now = datetime.now(timezone.utc)
+                        st.session_state.days_left = max(0, (trial_end - now).days + 1)
+                    except:
+                        st.session_state.days_left = 7
                     st.rerun()
                 else:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
@@ -190,24 +205,9 @@ elif st.session_state.username == "admin":
     all_users_resp = supabase_request("users_subscriptions", "GET")
     total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
     
-    # بطاقات الإحصاءات الثلاثية الواضحة والبارزة في ثيم الشاشة الحالي
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(f'<div class="dashboard-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count} مستخدمين</h2></div>', unsafe_allow_html=True)
     with col2:
         st.markdown('<div class="dashboard-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown('<div class="dashboard-box"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
-        
-    st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
-    if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
-        st.dataframe(all_users_resp, use_container_width=True)
-    else:
-        mock_data = [
-            {"username": "malek", "subscription_status": "trial", "days_left": 7},
-            {"username": "anas", "subscription_status": "trial", "days_left": 5}
-        ]
-        st.dataframe(mock_data, use_container_width=True)
-        
-    st.subheader("💬 تقييمات وملاحظات العملاء")
-    st.info("💡 قسم التقييمات جاهز ومعد للاستخدام فور ربطه بجدول الملاحظات الخاص بك بـ Supabase.")
