@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 💡 إجبار المتصفح على الثيم الليلي الفخم لظهور صندوق الشات وكافة الحقول بوضوح خارق
+# 2. إجبار المتصفح على الثيم الليلي الفخم لظهور صندوق الشات وكافة الحقول بوضوح خارق
 st.markdown("""
     <style>
     /* تثبيت خلفية داكنة فاخرة للمنصة بالكامل تمنع الشاشة البيضاء */
@@ -184,7 +184,7 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-# 👑 أولاً: عرض ميزات حساب الـ admin (لوحة الإدارة والإحصاءات الملونة)
+# 👑 أولاً: عرض ميزات حساب الـ admin (لوحة الإدارة والإحصاءات الملونة بدون أي شروط تفريعية)
 elif st.session_state.username == "admin":
     st.markdown("<h1 style='color: #38bdf8;'>📊 لوحة تحكم المسؤول العام (Admin)</h1>", unsafe_allow_html=True)
     st.markdown("<p>متابعة إحصاءات حية وجداول المشتركين والتقييمات الحالية للمنصة</p>", unsafe_allow_html=True)
@@ -197,4 +197,3 @@ elif st.session_state.username == "admin":
     st.markdown('<div class="dashboard-card"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
         
     st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
-    if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
