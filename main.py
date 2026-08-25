@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر مع محاذاة إجبارية للمنتصف
+# تنسيق المظهر العصري المهدئ للنظر مع جعل صندوق الشات يتبع النصوص بشكل طبيعي
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -19,6 +19,7 @@ st.markdown("""
         border-radius: 12px; 
         border: 2px solid #4f46e5 !important; 
         background-color: #334155 !important;
+        margin-top: 20px !important;
     }
     .stChatInputContainer textarea { color: #ffffff !important; }
     h1, h2, h3 { color: #818cf8 !important; text-align: center !important; font-family: 'Segoe UI', sans-serif; }
@@ -161,14 +162,12 @@ else:
         if payment_link_url:
             st.markdown(f"<br><a href='{payment_link_url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
     else:
-        # عرض الميزات في الأعلى بشكل أنيق وممركز
         st.title("💬 غرف المحادثات الاحترافية العالمية")
         st.write(f"👤 الحساب الحالي: **{st.session_state.username}**")
         
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # أدوات المسؤولة والميكروفون في صفوف أفقية ممركزه ومريحة للعين
         if st.session_state.username == "admin":
             st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
             all_users = supabase_request("users_subscriptions", "GET")
@@ -196,4 +195,5 @@ else:
         st.markdown("---")
         st.markdown("### 🌟 غرفة المحادثة الرئيسية النشطة")
         
-        # عرض المحادثة السابقة
+        for message in st.session_state.current_messages:
+            with st.chat_message(message["role"]):
