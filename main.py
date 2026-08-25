@@ -30,7 +30,7 @@ try:
 except:
     model = None
 
-# دالة الاستدعاء المحمية من Supabase
+# دالة الاستدعاء من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -183,12 +183,8 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ معالجة مسطحة ومباشرة بنسبة 100% لمنع خطأ الإزاحة والـ IndentationError نهائياً وبشكل قطعي
-                user_data = None
-                if isinstance(res, list) and len(res) > 0:
-                    user_data = res[0]
-                elif isinstance(res, dict):
-                    user_data = res
+                # 🛠️ التعديل الجذري الحاسم: استخراج الحساب خطياً في سطر واحد تماماً لمنع حدوث أي خطأ إزاحة نهائياً
+                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -209,3 +205,7 @@ if not st.session_state.logged_in:
         if btn_reg and reg_user and reg_pass:
             res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
             if isinstance(res, list) and len(res) > 0:
+                st.error("❌ اسم المستخدم مسجل مسبقاً!")
+            else:
+                try:
+                    cust_id = ""
