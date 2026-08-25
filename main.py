@@ -4,14 +4,14 @@ import requests
 import stripe
 from datetime import datetime, timezone, timedelta
 
-# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide)
+# 1. إعادة إعداد عنوان وتصميم الصفحة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="wide"
 )
 
-# تنسيق المظهر العصري المريح للنظر
+# تنسيق المظهر العصري للمنصة
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -30,10 +30,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفتاح Stripe من الـ Secrets
+# إعداد مفتاح Stripe
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# دالة التعامل مع قاعدة بيانات Supabase عبر REST API
+# دالة التعامل مع قاعدة بيانات Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     url = f"{st.secrets['SUPABASE_URL']}/rest/v1/{endpoint}"
     headers = {
@@ -50,7 +50,6 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
         elif method == "PATCH":
             response = requests.patch(url, headers=headers, json=json_data, params=params)
         
-        # إذا كانت الاستجابة قائمة وبها عناصر، نرجع العنصر الأول تسهيلاً للتعامل
         res_json = response.json()
         if isinstance(res_json, list) and len(res_json) > 0:
             return res_json[0]
@@ -74,7 +73,7 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
-# 3. بوابة الوصول وإدارة الحسابات
+# بوابة تسجيل الدخول وإنشاء الحسابات
 if not st.session_state.logged_in:
     st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
     st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
@@ -93,7 +92,7 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in = True
                 st.session_state.username = "admin"
                 st.session_state.is_subscribed = True
-                st.success("تم دخول المسؤولة بنجاح!")
+                st.success("تم دخول المسؤول بنجاح!")
                 st.rerun()
             else:
                 user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
@@ -150,7 +149,7 @@ if not st.session_state.logged_in:
                     except Exception as e:
                         st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
 
-# 4. تشغيل ميزات المنصة بالكامل بعد الدخول
+# تشغيل ميزات المنصة بالكامل بعد الدخول الصحيح
 else:
     payment_link_url = ""
     if st.session_state.username != "admin" and st.session_state.days_left <= 0:
@@ -170,16 +169,14 @@ else:
         except:
             pass
 
-    # ---- إضافة الجزء الخاص بإدارة غرف المحادثة وتصحيح الخطأ (السطر 197 وما بعده) ----
+    # إعداد شريط غرف المحادثة الجانبي
     st.sidebar.title("💬 غرف المحادثة")
     
-    # نموذج إضافة غرفة جديدة
     with st.sidebar.form("add_room_form", clear_on_submit=True):
         r_title = st.text_input("اسم الغرفة الجديدة:").strip()
         submit_room = st.form_submit_button("إضافة غرفة")
         
         if submit_room and r_title:
-            # هنا تم حل مشكلة الـ IndentationError بإضافة الأسطر التابعة للشرط بشكل صحيح
             if r_title not in st.session_state.chat_rooms:
                 st.session_state.chat_rooms[r_title] = []
                 st.session_state.active_room = r_title
@@ -188,7 +185,7 @@ else:
             else:
                 st.warning("هذه الغرفة موجودة بالفعل!")
 
-    # عرض الغرف الحالية والتحويل بينها
+    # التنقل بين الغرف المتوفرة
     for room in list(st.session_state.chat_rooms.keys()):
         if room == st.session_state.active_room:
             st.sidebar.markdown(f'<div class="room-active">{room}</div>', unsafe_allow_html=True)
@@ -197,13 +194,18 @@ else:
                 st.session_state.active_room = room
                 st.rerun()
 
-    # واجهة المحادثة الرئيسية داخل الغرفة النشطة
+    # واجهة عرض المحادثة والرسائل
     st.title(f"🤖 {st.session_state.active_room}")
     
-    # عرض الرسائل السابقة للغرفة النشطة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # استقبال مدخلات المستخدم الجديدة
+    # التحكم بصلاحيات الإرسال بناءً على حالة الاشتراك (القسم المصلح بالكامل)
     if not st.session_state.is_subscribed:
+        st.warning("⚠️ انتهت الفترة التجريبية. يرجى تجديد الاشتراك للمتابعة.")
+        if payment_link_url:
+            st.link_button("💳 اضغط هنا للدفع وتفعيل الاشتراك", payment_link_url, use_container_width=True)
+    else:
+        user_input = st.chat_input("اكتب رسالتك هنا...")
+        if user_input:
