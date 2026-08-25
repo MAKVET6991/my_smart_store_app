@@ -34,13 +34,11 @@ st.markdown("""
 
 # إعداد مفاتيح الخدمات الخارجية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
-model = None
-if "GEMINI_API_KEY" in st.secrets:
-    try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-1.5-flash")
-    except:
-        model = None
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-1.5-flash")
+except:
+    model = None
 
 # دالة الاستدعاء المضمونة من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -74,7 +72,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة والثابتة للجميع (Sidebar) ---
+# --- القائمة الجانبية المستقرة والثابتة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -105,7 +103,7 @@ if st.session_state.logged_in:
                 
     st.sidebar.markdown("---")
     
-    # تأمين ميزة الصوت التام
+    # تأمين ميزة الصوت التام ونقلها لأسفل القائمة لكي لا تسبب تجميد أو إخفاء حقل الشات بالمنتصف
     st.sidebar.subheader("🎙️ الأدوات الصوتية (اختياري)")
     try:
         audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
@@ -143,7 +141,12 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                
+                user_data = None
+                if isinstance(res, list) and len(res) > 0:
+                    user_data = res[0]
+                elif isinstance(res, dict):
+                    user_data = res
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -206,15 +209,12 @@ else:
             st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
             uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل:", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
             
+            # طباعة الرسائل المخزنة
             for msg in st.session_state.chat_rooms[st.session_state.active_room]:
                 with st.chat_message(msg["role"]):
                     st.write(msg["content"])
             
+            # 💡 معالجة الشات الفوري للادمن بدون تعليق الـ rerun
             user_input = st.chat_input("💡 اكتب سؤالك كرئيس للمنصة وسيجيبك الذكاء الاصطناعي فورا...", key="admin_input")
             if user_input:
                 st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-                with st.chat_message("user"):
-                    st.write(user_input)
-                
-                with st.chat_message("assistant"):
-                    if model:
