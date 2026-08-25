@@ -1,4 +1,128 @@
-import streamlit as st
+[12:14 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
+st.markdown("""
+    <style>
+    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
+    p { text-align: center !important; color: #94a3b8; }
+    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
+[12:15 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
+st.markdown("""
+    <style>
+    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
+    p { text-align: center !important; color: #94a3b8; }
+    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
+[12:17 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
+st.markdown("""
+    <style>
+    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
+    p { text-align: center !important; color: #94a3b8; }
+    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
+[12:21 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# تنسيقات الألوان الاحترافية ولون خط أبيض ناصع لحقل الكتابة
+st.markdown("""
+    <style>
+    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
+    p { text-align: center !important; color: #94a3b8; }
+    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-radius: 12px; border: …
+[12:25 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل الأساسي
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# 2. تصميم احترافي، عصري وآمن تماماً لا يخفي أي عنصر
+st.markdown("""
+    <style>
+    /* خلفية داكنة مريحة للعين */
+    .stApp { background-color: #0b0f19; color: #f1f5f9; }
+    
+    /* تنسيق كروت الرسائل لتظهر بشكل بارز */
+    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; }
+    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px …
+[12:26 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import google.generativeai as genai
+import requests
+import stripe
+from datetime import datetime, timezone, timedelta
+
+# 1. إعدادات الهيكل الأساسي
+st.set_page_config(
+    page_title="منصة المحادثة الاحترافية الذكية", 
+    page_icon="🤖", 
+    layout="wide"
+)
+
+# 2. تصميم احترافي، عصري وآمن تماماً لا يخفي أي عنصر
+st.markdown("""
+    <style>
+    /* خلفية داكنة مريحة للعين */
+    .stApp { background-color: #0b0f19; color: #f1f5f9; }
+    
+    /* تنسيق كروت الرسائل لتظهر بشكل بارز */
+    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; text-align: right; }
+    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px;…
+[12:27 AM, 8/26/2026] Malik Mohamed: import streamlit as st
 import google.generativeai as genai
 import requests
 import stripe
@@ -79,11 +203,11 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.markdown(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
+    st.sidebar.markdown(f"👤 *الحساب الحالي:* {st.session_state.username}")
     if st.session_state.username == "admin":
         st.sidebar.success("👑 رتبة: المسؤول العام")
     else:
-        st.sidebar.info(f"⏳ الفترة التجريبية: **{st.session_state.days_left} أيام متبقية**")
+        st.sidebar.info(f"⏳ الفترة التجريبية: *{st.session_state.days_left} أيام متبقية*")
     
     st.sidebar.markdown("---")
     
@@ -101,7 +225,7 @@ if st.session_state.logged_in:
         # عرض وتبديل الغرف بوضوح
         for room in list(st.session_state.chat_rooms.keys()):
             if room == st.session_state.active_room:
-                st.sidebar.markdown(f"🎯 **【 {room} 】**")
+                st.sidebar.markdown(f"🎯 *【 {room} 】*")
             else:
                 if st.sidebar.button(f"📄 {room}", key=f"sidebar_{room}", use_container_width=True):
                     st.session_state.active_room = room
@@ -141,7 +265,6 @@ if not st.session_state.logged_in:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 user_data = res if isinstance(res, list) and len(res) > 0 else res
                 
-                # تصحيح استخراج القواميس من القوائم المسترجعة بأمان
                 if isinstance(user_data, list) and len(user_data) > 0:
                     user_data = user_data[0]
                 
@@ -203,4 +326,5 @@ else:
             st.markdown('<div class="dashboard-card"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
             
         st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
+        # 🛠️ تم تصحيح وزنية مسافات الإزاحة والـ Indentation هنا تماماً ليعمل بنجاح
         if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
