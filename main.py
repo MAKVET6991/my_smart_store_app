@@ -36,7 +36,7 @@ st.markdown("""
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-3.6-flash")
 except:
     model = None
 
