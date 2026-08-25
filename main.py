@@ -14,20 +14,15 @@ st.set_page_config(
 # 2. تصميم عصري وآمن 100% يضمن ظهور صندوق المحادثة وكافة العناصر بوضوح
 st.markdown("""
     <style>
-    /* خلفية داكنة مريحة للعين متوافقة مع المتصفح */
     .stApp { background-color: #0f172a; color: #f1f5f9; font-family: system-ui, sans-serif; }
-    
-    /* تنسيق صناديق الإحصاءات الفاخرة لوحة المسؤول */
     .dashboard-card { background-color: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; }
     .dashboard-card h3 { color: #94a3b8 !important; font-size: 1.1rem !important; }
     .dashboard-card h2 { color: #38bdf8 !important; font-size: 2rem !important; margin-top: 5px !important; }
-    
-    /* تحسين مظهر صناديق الدخول */
     .login-box { background-color: #1e293b; padding: 30px; border-radius: 16px; border: 1px solid #334155; max-width: 500px; margin: 0 auto; }
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفاتيح الخدمات الخارجية الآمنة
+# إعداد مفاتيح الخدمات الخارجية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -35,7 +30,7 @@ try:
 except:
     model = None
 
-# دالة الاستدعاء المضمونة من Supabase
+# دالة الاستدعاء من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -96,21 +91,16 @@ def render_admin_dashboard():
             {"username": "anas", "subscription_status": "trial", "days_left": 5}
         ]
         st.dataframe(mock_data, use_container_width=True)
-        
-    st.subheader("💬 تقييمات وملاحظات العملاء")
-    st.info("💡 قسم التقييمات جاهز ومعد للاستخدام فور ربطه بجدول الملاحظات الخاص بك.")
 
-# دالة عرض واجهة شات المستخدم الأصلية والآمنة لضمان عدم اختفاء صندوق الكتابة
+# دالة عرض واجهة شات المستخدم الأصلي لضمان ظهور صندوق الكتابة
 def render_user_chat():
     st.title(f"💬 الغرفة: {st.session_state.active_room}")
     
-    # استخدام نظام الـ chat_message الأصلي والآمن من Streamlit ليعمل بوضوح ممتاز
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # صندوق الإدخال الأصلي الذي يظهر بشكل ثابت أسفل الصفحة دائماً
-    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا وسترى ما تكتبه بوضوح...")
+    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا...")
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         with st.chat_message("user"):
@@ -118,14 +108,14 @@ def render_user_chat():
             
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية من Gemini..."):
+                with st.spinner("جاري التفكير وتوليد الإجابة..."):
                     try:
                         response = model.generate_content(user_input)
                         ai_reply = response.text
                     except:
                         ai_reply = "عذراً، حدث خطأ أثناء الاتصال بالخادم الذكي."
             else:
-                ai_reply = f"أهلاً بك يا {st.session_state.username}! تم استقبال رسالتك بنجاح في غرفة [{st.session_state.active_room}]. يرجى إضافة مفتاح GEMINI_API_KEY للحصول على ردود فورية حية."
+                ai_reply = f"أهلاً بك يا {st.session_state.username}! تم استقبال رسالتك بنجاح في غرفة [{st.session_state.active_room}]. يرجى إضافة مفتاح GEMINI_API_KEY للحصول على ردود فورية."
             st.write(ai_reply)
             
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "assistant", "content": ai_reply})
@@ -193,7 +183,7 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ معالجة آمنة ومعززة لاستخراج الحساب الصحيح من قائمة البيانات المرجعة للحسابات القديمة والجديدة
+                # 🛠️ معالجة خطية آمنة 100% لاستخراج الحساب لمنع أخطاء الـ Indentation والـ Else تماماً
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
                     user_data = res[0]
@@ -204,9 +194,18 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.session_state.is_subscribed = True
+                    st.session_state.days_left = 7
+                    st.rerun()
+                else:
+                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
                     
-                    try:
-                        trial_end_str = user_data.get("trial_end_date")
-                        if trial_end_str:
-                            trial_end = datetime.fromisoformat(trial_end_str.replace("Z", "+00:00"))
-                        else:
+    with tab2:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        reg_user = st.text_input("👤 اختر اسم مستخدم جديد", key="u_reg").strip()
+        reg_pass = st.text_input("🔒 اختر كلمة مرور قوية", type="password", key="p_reg")
+        btn_reg = st.button("✨ إنتاج وتفعيل الحساب فوراً", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if btn_reg and reg_user and reg_pass:
+            res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
+            if isinstance(res, list) and len(res) > 0:
