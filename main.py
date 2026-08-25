@@ -30,7 +30,7 @@ try:
 except:
     model = None
 
-# دالة الاستدعاء من Supabase
+# دالة الاستدعاء المحمية من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -92,7 +92,7 @@ def render_admin_dashboard():
         ]
         st.dataframe(mock_data, use_container_width=True)
 
-# دالة عرض واجهة شات المستخدم الأصلي لضمان ظهور صندوق الكتابة
+# دالة عرض واجهة شات المستخدم الأصلي
 def render_user_chat():
     st.title(f"💬 الغرفة: {st.session_state.active_room}")
     
@@ -183,7 +183,7 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ معالجة خطية آمنة 100% لاستخراج الحساب لمنع أخطاء الـ Indentation والـ Else تماماً
+                # 🛠️ معالجة مسطحة ومباشرة بنسبة 100% لمنع خطأ الإزاحة والـ IndentationError نهائياً وبشكل قطعي
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
                     user_data = res[0]
