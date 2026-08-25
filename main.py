@@ -4,14 +4,14 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل المريح
+# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide) لمنع اختفاء العناصر
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر مع رفع صندوق الشات تلقائياً للأعلى
+# تنسيق المظهر العصري المهدئ للنظر مع محاذاة وتوزيع قياسي ممركز للأبعاد
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -19,13 +19,15 @@ st.markdown("""
         border-radius: 12px; 
         border: 2px solid #4f46e5 !important; 
         background-color: #334155 !important;
+        margin-top: 20px !important;
     }
     .stChatInputContainer textarea { color: #ffffff !important; }
     h1, h2, h3 { color: #818cf8 !important; text-align: center !important; font-family: 'Segoe UI', sans-serif; }
     p, .stMarkdown { text-align: center !important; color: #94a3b8; }
-    .login-box { padding: 20px; border-radius: 12px; background-color: #334155; border: 1px solid #475569; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    .login-box { padding: 20px; border-radius: 12px; background-color: #334155; border: 1px solid #475569; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin: 0 auto; max-width: 500px; }
     .file-box { padding: 10px; border-radius: 8px; background-color: #064e3b; margin-bottom: 10px; border: 1px dashed #10b981; color: #a7f3d0; }
     .stChatMessage { background-color: #334155 !important; border-radius: 10px; margin-bottom: 10px; padding: 10px; color: #f8fafc !important; }
+    .room-active { background-color: #4f46e5 !important; color: white !important; font-weight: bold; border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -50,6 +52,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except Exception as e:
         return []
 
+# 2. تهيئة حالات الذاكرة المؤقتة للمتصفح الحالي
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -58,12 +61,16 @@ if "is_subscribed" not in st.session_state:
     st.session_state.is_subscribed = False
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
-if "current_messages" not in st.session_state:
-    st.session_state.current_messages = []
+
+# تهيئة مخزن الغرف المتعددة الذكي والتلقائي
+if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
+    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
+if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
+    st.session_state.active_room = "المحادثة الرئيسية 🌟"
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
-# 3. بوابة الوصول وإدارة الحسابات
+# 3. بوابة الوصول وإدارة الحسابات السحابية
 if not st.session_state.logged_in:
     st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
     st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
@@ -71,72 +78,70 @@ if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول", "📝 إنشاء حساب جديد"])
     
     with tab1:
-        with st.container():
-            st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            username_input = st.text_input("اسم المستخدم", key="login_user").strip()
-            password_input = st.text_input("كلمة المرور", type="password", key="login_pass")
-            login_button = st.button("تسجيل الدخول", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            if login_button:
-                if username_input == "admin" and password_input == "admin123":
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        username_input = st.text_input("اسم المستخدم", key="login_user").strip()
+        password_input = st.text_input("كلمة المرور", type="password", key="login_pass")
+        login_button = st.button("تسجيل الدخول", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if login_button:
+            if username_input == "admin" and password_input == "admin123":
+                st.session_state.logged_in = True
+                st.session_state.username = "admin"
+                st.session_state.is_subscribed = True
+                st.success("تم دخول المسؤولة بنجاح!")
+                st.rerun()
+            else:
+                user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
+                if user_data and user_data["password_hash"] == password_input:
+                    u = user_data
                     st.session_state.logged_in = True
-                    st.session_state.username = "admin"
-                    st.session_state.is_subscribed = True
-                    st.success("تم دخول المسؤولة بنجاح!")
+                    st.session_state.username = username_input
+                    
+                    trial_end = datetime.fromisoformat(u["trial_end_date"].replace("Z", "+00:00"))
+                    now = datetime.now(timezone.utc)
+                    delta = (trial_end - now).days + 1
+                    st.session_state.days_left = max(0, delta)
+                    
+                    if u["subscription_status"] == "active" or st.session_state.days_left > 0:
+                        st.session_state.is_subscribed = True
+                    else:
+                        st.session_state.is_subscribed = False
+                        
+                    st.success(f"مرحباً بك مجدداً {username_input}!")
                     st.rerun()
                 else:
-                    user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
-                    if user_data and user_data["password_hash"] == password_input:
-                        u = user_data
-                        st.session_state.logged_in = True
-                        st.session_state.username = username_input
-                        
-                        trial_end = datetime.fromisoformat(u["trial_end_date"].replace("Z", "+00:00"))
-                        now = datetime.now(timezone.utc)
-                        delta = (trial_end - now).days + 1
-                        st.session_state.days_left = max(0, delta)
-                        
-                        if u["subscription_status"] == "active" or st.session_state.days_left > 0:
-                            st.session_state.is_subscribed = True
-                        else:
-                            st.session_state.is_subscribed = False
-                            
-                        st.success(f"مرحباً بك مجدداً {username_input}!")
-                        st.rerun()
-                    else:
-                        st.error("اسم المستخدم أو كلمة المرور غير صحيحة!")
-                    
+                    st.error("اسم المستخدم أو كلمة المرور غير صحيحة!")
+                
     with tab2:
-        with st.container():
-            st.markdown('<div class="login-box">', unsafe_allow_html=True)
-            new_username = st.text_input("اختر اسم مستخدم جديد", key="reg_user").strip()
-            new_password = st.text_input("اختر كلمة مرور", type="password", key="reg_pass")
-            register_button = st.button("تأكيد وإنشاء الحساب", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            if register_button:
-                if not new_username or not new_password:
-                    st.error("الرجاء ملء جميع الحقول أولاً!")
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        new_username = st.text_input("اختر اسم مستخدم جديد", key="reg_user").strip()
+        new_password = st.text_input("اختر كلمة مرور", type="password", key="reg_pass")
+        register_button = st.button("تأكيد وإنشاء الحساب", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if register_button:
+            if not new_username or not new_password:
+                st.error("الرجاء ملء جميع الحقول أولاً!")
+            else:
+                check_user = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{new_username}"})
+                if check_user:
+                    st.error("اسم المستخدم هذا مسجل مسبقاً! اختر اسماً آخر.")
                 else:
-                    check_user = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{new_username}"})
-                    if check_user:
-                        st.error("اسم المستخدم هذا مسجل مسبقاً! اختر اسماً آخر.")
-                    else:
-                        try:
-                            customer = stripe.Customer.create(description=f"User: {new_username}")
-                            new_user_payload = {
-                                "username": new_username,
-                                "password_hash": new_password,
-                                "subscription_status": "trial",
-                                "stripe_customer_id": customer.id
-                            }
-                            supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
-                            st.success("🎉 تم إنشاء حسابك وحفظه بنجاح! اذهب لتبويب (تسجيل الدخول).")
-                        except Exception as e:
-                            st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
+                    try:
+                        customer = stripe.Customer.create(description=f"User: {new_username}")
+                        new_user_payload = {
+                            "username": new_username,
+                            "password_hash": new_password,
+                            "subscription_status": "trial",
+                            "stripe_customer_id": customer.id
+                        }
+                        supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
+                        st.success("🎉 تم إنشاء حسابك بنجاح! اذهب لتبويب (تسجيل الدخول).")
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
 
-# 4. غرف المحادثة والشات المباشر المضمون الموحد عمودياً
+# 4. تشغيل ميزات المنصة بالكامل بعد الدخول
 else:
     payment_link_url = ""
     if st.session_state.username != "admin" and not st.session_state.is_subscribed:
@@ -167,32 +172,27 @@ else:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
+        # لوحة تحكم المسؤولة (أدمن) تظهر في الأعلى ممركزة بوضوح
         if st.session_state.username == "admin":
             st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
             all_users = supabase_request("users_subscriptions", "GET")
             if all_users:
                 user_list = ", ".join([f"{u['username']}({u['subscription_status']})" for u in all_users])
                 st.info(f"المشتركون في السيرفر حالياً: {user_list}")
-        
-        st.markdown("### 🎙️ المساعد الصوتي السريع")
-        audio_value = st.audio_input("اضغط للتحدث بصوتك:")
-        if audio_value is not None:
-            st.session_state.voice_text = "مرحباً، أود تجربة المساعد الذكي الصوتي للشركة."
-            st.info(f"🎤 تم التقاط الصوت وتحويله لنص: '{st.session_state.voice_text}'")
-        
-        st.markdown("### 📂 تحليل الملفات والصور")
-        uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
-        file_context = ""
-        if uploaded_file is not None:
-            st.success("✅ تم تحميل الملف بنجاح!")
-            if uploaded_file.type == "text/plain":
-                file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
 
         st.markdown("---")
-        st.markdown("### 🌟 غرفة المحادثة الرئيسية النشطة")
-        
-        for message in st.session_state.current_messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
 
-        user_input = st.chat_input("اكتب سؤالك واستفسارك هنا وسيجيبك الذكاء الاصطناعي فوراً...")
+        # توزيع الميزات الثلاث (الغرف، الصوت، الملفات) بالتساوي في 3 أعمدة أفقية لتأخذ كامل عرض الشاشة
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("### 🗂️ غرف المحادثة")
+            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
+            create_room_btn = st.button("أنشئ الغرفة الآن 🚀", use_container_width=True)
+            
+            if create_room_btn and room_input.strip():
+                r_title = room_input.strip()
+                if r_title not in st.session_state.chat_rooms:
+                    st.session_state.chat_rooms[r_title] = []
+                st.session_state.active_room = r_title
+                st.rerun()
