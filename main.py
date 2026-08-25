@@ -142,7 +142,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else res
+                user_data = res if isinstance(res, list) and len(res) > 0 else res
                 if user_data and isinstance(user_data, dict) and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -194,10 +194,10 @@ else:
         # حساب عدد المستخدمين المسجلين الفعلي أو عرض رقم افتراضي آمن لحماية الواجهة من الاختفاء
         total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
         
-        # 💡 عرض البطاقات الإحصائية بشكل دائم ومحمي لا يختفي أبداً
+        # عرض البطاقات الإحصائية بشكل دائم ومحمي لا يختفي أبداً
         c1, c2, c3 = st.columns(3)
         with c1:
             st.markdown(f'<div class="stat-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count}</h2></div>', unsafe_allow_html=True)
         with c2:
-            st.markdown('<div class="stat-box"><h3>💳 الاشتراسات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
+            st.markdown('<div class="stat-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
         with c3:
