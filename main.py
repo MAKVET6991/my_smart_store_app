@@ -28,6 +28,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
     p, .stMarkdown { 
+        text-align: center !important;
         color: #94a3b8; 
     }
     
@@ -39,7 +40,7 @@ st.markdown("""
         background: #1e293b;
         border-radius: 16px;
         border: 1px solid #334155;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
     
     /* شريط المحادثة السفلي العصري */
@@ -101,9 +102,8 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
             response = requests.patch(url, headers=headers, json=json_data, params=params)
         
         res_json = response.json()
-        # هنا تم تصحيح طريقة القراءة لتجنب مشاكل تسجيل الدخول، لتقبل القوائم أو الكائنات المفردة مباشرة
         if isinstance(res_json, list) and len(res_json) > 0:
-            return res_json[0]
+            return res_json[0] # إرجاع المستخدم الأول مباشرة
         return res_json
     except Exception as e:
         return None
@@ -122,12 +122,11 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "✨ المحادثة الرئيسية 🌟"
 
-# 3. بوابة الدخول وإنشاء الحسابات المنسقة
+# --- الحالة الأولى: المستخدم لم يسجل دخوله بعد (عرض صفحة الدخول فقط ونخفي القائمة الجانبية تماماً) ---
 if not st.session_state.logged_in:
     st.markdown("<h1 style='margin-top: 50px;'>⚡ المنصة الذكية المتكاملة</h1>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 1.1rem;'>سجل دخولك الآن للوصول إلى أدوات الذكاء الاصطناعي الفائقة</p>", unsafe_allow_html=True)
     
-    # تبويبات أنيقة للتنقل
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول لحسابك", "📝 فتح حساب جديد"])
     
     with tab1:
@@ -146,7 +145,6 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
-                # التحقق المصحح الذي يطابق الـ Object المسترجع بدقة
                 if user_data and isinstance(user_data, dict) and user_data.get("password_hash") == password_input:
                     st.session_state.logged_in = True
                     st.session_state.username = username_input
@@ -167,7 +165,7 @@ if not st.session_state.logged_in:
                     st.success(f"👋 مرحباً بك مجدداً {username_input}!")
                     st.rerun()
                 else:
-                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة، يرجى إعادة المحاولة.")
+                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
                 
     with tab2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
@@ -178,14 +176,13 @@ if not st.session_state.logged_in:
         
         if register_button:
             if not new_username or not new_password:
-                st.error("⚠️ الرجاء كتابة اسم المستخدم وكلمة المرور أولاً!")
+                st.error("⚠️ الرجاء كتابة البيانات كاملة أولاً!")
             else:
                 check_user = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{new_username}"})
                 if check_user:
-                    st.error("❌ اسم المستخدم هذا مسجل بالفعل مسبقاً! اختر اسماً آخر.")
+                    st.error("❌ اسم المستخدم مسجل بالفعل!")
                 else:
                     try:
-                        # إنشاء العميل المالي بـ Stripe وتحديد فترة التجربة
                         customer = stripe.Customer.create(description=f"User: {new_username}")
                         future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
                         
@@ -196,13 +193,12 @@ if not st.session_state.logged_in:
                             "stripe_customer_id": customer.id,
                             "trial_end_date": future_trial
                         }
-                        # إرسال البيانات لقاعدة البيانات
                         supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
-                        st.success("🎉 تهانينا! تم إنشاء حسابك بنجاح وبأمان. يمكنك الآن التوجه لتبويب (تسجيل الدخول) والولوج مباشرة.")
+                        st.success("🎉 تم إنشاء حسابك بنجاح! انتقل الآن إلى تبويب (تسجيل الدخول) للولوج مباشرة.")
                     except Exception as e:
-                        st.error(f"حدث خطأ غير متوقع أثناء إعداد ملفك الآمن: {e}")
+                        st.error(f"حدث خطأ أثناء الإعداد: {e}")
 
-# 4. تشغيل واجهة المنصة بالكامل بعد الدخول
+# --- الحالة الثانية: تم تسجيل الدخول بنجاح (تظهر الميزات والرسائل وزر الخروج بالكامل) ---
 else:
     payment_link_url = ""
     if st.session_state.username != "admin" and st.session_state.days_left <= 0:
@@ -222,8 +218,13 @@ else:
         except:
             pass
 
-    # إعداد القائمة الجانبية الأنيقة لإدارة الغرف
-    st.sidebar.markdown("<h2 style='text-align: right !important; font-size: 1.5rem;'>📁 غرف المحادثة</h2>", unsafe_allow_html=True)
+    # إعداد القائمة الجانبية الأنيقة لإدارة الغرف وحالة الحساب
+    st.sidebar.markdown(f"### 👤 الحساب: {st.session_state.username}")
+    if st.session_state.username != "admin":
+        st.sidebar.markdown(f"⏳ الأيام التجريبية المتبقية: **{st.session_state.days_left}** يوم")
+    
+    st.sidebar.markdown("<hr style='margin: 10px 0; border-color: #334155;'>", unsafe_allow_html=True)
+    st.sidebar.markdown("### 📁 غرف المحادثة")
     
     with st.sidebar.form("add_room_form", clear_on_submit=True):
         r_title = st.text_input("🆕 اسم الغرفة الجديدة:").strip()
