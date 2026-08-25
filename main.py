@@ -6,8 +6,9 @@ st.set_page_config(page_title="غرف المحادثات الاحترافية ل
 st.title("💬 غرف المحادثات الاحترافية للموظفين")
 st.write("مرحباً بك في النسخة التجريبية الأولى من منصتك الخاصة")
 
-# 2. ربط مفتاح الـ API مباشرة بالكود لضمان العمل
-genai.configure(api_key="AIzaSyAbBRN6IhIW02QYNZHe9sr52rEQ0cwgqeVj-R9esgQBUDqmt2CQ")
+# 2. جلب مفتاح الـ API من إعدادات السيرفر الآمنة لـ Streamlit
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+genai.configure(api_key=GEMINI_API_KEY)
 
 # 3. استخدام موديل هجين وسريع ومجاني ممتاز للمحادثات
 model = genai.GenerativeModel('gemini-1.5-flash')
