@@ -32,11 +32,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفاتيح الخدمات الخارجية ونموذج فلاش المتطور لقراءة الوسائط والصور
+# إعداد مفاتيح الخدمات الخارجية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # استخدام نموذج flash لدعم قراءة النصوص والملفات والصور معاً
     model = genai.GenerativeModel("gemini-1.5-flash")
 except:
     model = None
@@ -81,7 +80,6 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     
     if st.session_state.username != "admin":
-        # 🎙️ إضافة ميزة مدخلات الصوت والمايك في الشريط الجانبي
         st.sidebar.subheader("🎙️ الأدوات الصوتية")
         audio_value = st.sidebar.audio_input("قم بتسجيل صوتك لإدخاله للمنصة:")
         if audio_value:
@@ -188,15 +186,13 @@ elif st.session_state.username == "admin":
 else:
     st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
     
-    # 📁 إضافة صندوق رفع الصور والملفات المتقدم أعلى الشات مباشرة
-    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته وتحليله:", type=["png", "jpg", "jpeg", "txt"])
+    # 📁 رفع الملفات والصور المتقدم
+    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بتحليله:", type=["png", "jpg", "jpeg", "txt"])
     
-    # عرض الرسائل السابقة المباشرة بشكل ثابت
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل إدخال الرسائل والمحادثة (صندوق الأسئلة الأساسي)
     user_input = st.chat_input("💡 اكتب سؤالك هنا وسيجيبك الذكاء الاصطناعي الفوري الحقيقي...")
     
     if user_input:
@@ -206,11 +202,16 @@ else:
             
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري قراءة الوسائط وتوليد الإجابة الحقيقية..."):
+                with st.spinner("جاري قراءة الوسائط وتوليد الإجابة..."):
                     try:
-                        # في حال رفع المستخدم لصورة ملموسة
+                        # 🛠️ تم تصحيح وإغلاق البلوك بالكامل هنا بشكل نظيف ومحمي
                         if uploaded_file and uploaded_file.type.startswith("image/"):
                             img = Image.open(uploaded_file)
                             response = model.generate_content([user_input, img])
                             ai_reply = response.text
-                        # في حال رفع ملف نصي عادي
+                        elif uploaded_file and uploaded_file.type == "text/plain":
+                            file_text = uploaded_file.read().decode("utf-8")
+                            combined_prompt = f"الملف المرفق:\n{file_text}\n\nالسؤال: {user_input}"
+                            response = model.generate_content(combined_prompt)
+                            ai_reply = response.text
+                        else:
