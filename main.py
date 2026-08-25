@@ -76,7 +76,7 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.write(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
+    st.sidebar.write(f"👤 *الحساب الحالي:* {st.session_state.username}")
     st.sidebar.markdown("---")
     
     if st.session_state.username != "admin":
@@ -119,9 +119,11 @@ if not st.session_state.logged_in:
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول", "📝 فتح حساب جديد"])
     
     with tab1:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
         user_in = st.text_input("👤 اسم المستخدم", key="u_login").strip()
         pass_in = st.text_input("🔒 كلمة المرور", type="password", key="p_login")
         btn_login = st.button("🚀 دخول آمن للمنصة", use_container_width=True, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_login:
             if user_in == "admin" and pass_in == "admin123":
@@ -140,9 +142,11 @@ if not st.session_state.logged_in:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
                     
     with tab2:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
         reg_user = st.text_input("👤 اختر اسم مستخدم جديد", key="u_reg").strip()
         reg_pass = st.text_input("🔒 اختر كلمة مرور قوية", type="password", key="p_reg")
         btn_reg = st.button("✨ تفعيل وإنشاء الحساب فوراً", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_reg and reg_user and reg_pass:
             res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
@@ -202,16 +206,12 @@ else:
             
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري قراءة الوسائط وتوليد الإجابة..."):
-                    try:
-                        # 🛠️ معالجة مسطحة ومباشرة 100% لمنع خطأ الإزاحة والـ else المتداخلة نهائياً
-                        gemini_inputs = [user_input]
-                        
-                        if uploaded_file and uploaded_file.type.startswith("image/"):
-                            gemini_inputs.append(Image.open(uploaded_file))
-                        elif uploaded_file and uploaded_file.type == "text/plain":
-                            gemini_inputs.append(uploaded_file.read().decode("utf-8"))
-                        
-                        response = model.generate_content(gemini_inputs)
-                        ai_reply = response.text
-                    except Exception as e:
+                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
+                    # 🛠️ معالجة مسطحة خطية بالكامل بدون أي كتل try/except أو شروط متداخلة لمنع حدوث أي خطأ إزاحة نهائياً
+                    gemini_inputs = [user_input]
+                    
+                    if uploaded_file and uploaded_file.type.startswith("image/"):
+                        gemini_inputs.append(Image.open(uploaded_file))
+                    
+                    if uploaded_file and uploaded_file.type == "text/plain":
+                        gemini_inputs.append(uploaded_file.read().decode("utf-8"))
