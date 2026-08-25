@@ -4,24 +4,28 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة بألوان زاهية ومشرقة
+# 1. إعداد عنوان وتصميم الصفحة بألوان مهدئة ومريحة جداً للعين
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="centered"
 )
 
+# تنسيق المظهر العصري المهدئ للنظر (Dark/Soft Theme)
 st.markdown("""
     <style>
-    .stApp { background-color: #f8fafc; color: #1e293b; }
-    .stChatInputContainer { border-radius: 12px; border: 1px solid #cbd5e1 !important; background-color: #ffffff !important;}
-    h1 { color: #4f46e5 !important; text-align: center; font-family: 'Segoe UI', sans-serif; }
-    p { text-align: center; color: #64748b; }
-    .login-box { padding: 20px; border-radius: 12px; background-color: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
-    .file-box { padding: 10px; border-radius: 8px; background-color: #f0fdf4; margin-bottom: 10px; border: 1px dashed #22c55e; color: #166534; }
-    .admin-box { padding: 12px; border-radius: 8px; background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; margin-top: 10px; }
-    .trial-box { padding: 10px; border-radius: 8px; background-color: #fef3c7; border: 1px solid #fde68a; color: #92400e; margin-bottom: 15px; text-align: center; font-weight: bold; }
-    .pay-box { padding: 20px; border-radius: 12px; background-color: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; text-align: center; }
+    .stApp { background-color: #1e293b; color: #f8fafc; }
+    .stChatInputContainer { border-radius: 12px; border: 2px solid #4f46e5 !important; background-color: #334155 !important;}
+    .stChatInputContainer textarea { color: #ffffff !important; }
+    h1, h3 { color: #818cf8 !important; text-align: center; font-family: 'Segoe UI', sans-serif; }
+    p { text-align: center; color: #94a3b8; }
+    .login-box { padding: 20px; border-radius: 12px; background-color: #334155; border: 1px solid #475569; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    .file-box { padding: 10px; border-radius: 8px; background-color: #064e3b; margin-bottom: 10px; border: 1px dashed #10b981; color: #a7f3d0; }
+    .admin-box { padding: 12px; border-radius: 8px; background-color: #1e3a8a; border: 1px solid #3b82f6; color: #bfdbfe; margin-top: 10px; }
+    .trial-box { padding: 10px; border-radius: 8px; background-color: #78350f; border: 1px solid #f59e0b; color: #fef3c7; margin-bottom: 15px; text-align: center; font-weight: bold; }
+    .pay-box { padding: 20px; border-radius: 12px; background-color: #881337; border: 1px solid #f43f5e; color: #ffe4e6; text-align: center; }
+    /* تحسين نصوص الشات */
+    .stChatMessage { background-color: #334155 !important; border-radius: 10px; margin-bottom: 10px; padding: 10px; color: #f8fafc !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,7 +59,6 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة الغرفة بشكل إجباري ومباشر في كل دورة تشغيل
 if "current_messages" not in st.session_state:
     st.session_state.current_messages = []
 
@@ -188,9 +191,3 @@ else:
                 st.session_state.logged_in = False
                 st.session_state.username = ""
                 st.rerun()
-
-        # عرض المحادثة تلقائياً وصندوق الشات بالأسفل مباشرة
-        st.markdown("### 🌟 غرفة المحادثة الرئيسية النشطة")
-        for message in st.session_state.current_messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
