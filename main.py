@@ -72,7 +72,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة والثابتة للجميع (Sidebar) ---
+# --- القائمة الجانبية المستقرة والثابتة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -83,15 +83,8 @@ if st.session_state.logged_in:
         st.sidebar.info("⏳ الفترة التجريبية: نشطة")
     
     st.sidebar.markdown("---")
-    
-    # ميزة أدوات الصوت وغرف المحادثة تظهر دائماً للجميع (بما فيهم الـ Admin)
-    st.sidebar.subheader("🎙️ الأدوات الصوتية")
-    audio_value = st.sidebar.audio_input("قم بتسجيل صوتك لإدخاله للمنصة:")
-    if audio_value:
-        st.sidebar.success("تم التقاط الملف الصوتي بنجاح وجاري تحضيره للتحليل!")
-        
-    st.sidebar.markdown("---")
     st.sidebar.subheader("💬 غرف المحادثة")
+    
     with st.sidebar.form("room_form", clear_on_submit=True):
         r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
         add_btn = st.form_submit_button("➕ إنشاء الغرفة", use_container_width=True)
@@ -107,8 +100,19 @@ if st.session_state.logged_in:
             if st.sidebar.button(f"📄 {room}", key=f"side_{room}", use_container_width=True):
                 st.session_state.active_room = room
                 st.rerun()
+                
     st.sidebar.markdown("---")
+    
+    # 🛠️ تأمين ميزة الصوت التام ونقلها لأسفل القائمة لكي لا تسبب تجميد أو إخفاء حقل الشات بالمنتصف
+    st.sidebar.subheader("🎙️ الأدوات الصوتية (اختياري)")
+    try:
+        audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
+        if audio_value:
+            st.sidebar.success("🎤 تم التقاط الصوت بنجاح!")
+    except:
+        pass
 
+    st.sidebar.markdown("---")
     if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
@@ -116,7 +120,7 @@ if st.session_state.logged_in:
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
-# --- الواجهة الرئيسية بالمنتصف ---
+# --- الواجهة الرئيسية بالمنتصف (بناء تسلسلي مباشر ومحمي ضد الاختفاء) ---
 if not st.session_state.logged_in:
     st.title("⚡ منصة المحادثة الاحترافية الذكية")
     st.write("الجيل القادم من حلول الذكاء الاصطناعي وإدارة البيانات")
@@ -137,11 +141,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
-                
-                # معالجة آمنة لفك محتوى قائمة الحساب القديم بدقة تامة
-                if isinstance(user_data, list) and len(user_data) > 0:
-                    user_data = user_data[0]
+                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -180,9 +180,12 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-# --- معالجة شاشات العرض الموحدة والآمنة بعد تسجيل الدخول بنجاح لمنع خطأ الـ Indentation ---
+# --- معالجة شاشات العرض بعد تسجيل الدخول بنجاح ---
 else:
-    # 👑 إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نمنحه التبويبات المتكاملة الشاملة
+    uploaded_file = None
+    user_input = None
+    
+    # 👑 حساب الـ Admin: لوحة الإدارة وشات الادمن المدمج
     if st.session_state.username == "admin":
         admin_tab1, admin_tab2 = st.tabs(["📊 لوحة الإدارة والإحصاءات", "💬 صفحة الدردشة والمحادثة للادمن"])
         
@@ -200,15 +203,17 @@ else:
             data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
             st.dataframe(data_to_show, use_container_width=True)
             
-            st.subheader("💬 تقييمات وملاحظات عملائك")
-            st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
-            
         with admin_tab2:
             st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
-            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل (خاص بالادمن):", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
+            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل:", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
             
             for msg in st.session_state.chat_rooms[st.session_state.active_room]:
                 with st.chat_message(msg["role"]):
                     st.write(msg["content"])
             
             user_input = st.chat_input("💡 اكتب سؤالك كرئيس للمنصة وسيجيبك الذكاء الاصطناعي فورا...", key="admin_input")
+
+    # 👤 حساب المستخدم العادي (مثل حساب malik المفتوح بالصورة)
+    else:
+        st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
+        uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بتحليله:", type=["png", "jpg", "jpeg", "txt"], key="user_file")
