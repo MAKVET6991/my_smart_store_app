@@ -1,6 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 import requests
+import stripe
+from datetime import datetime, timezone
 
 # 1. إعداد عنوان وتصميم الصفحة بألوان زاهية ومشرقة
 st.set_page_config(
@@ -19,8 +21,14 @@ st.markdown("""
     .login-box { padding: 20px; border-radius: 12px; background-color: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
     .file-box { padding: 10px; border-radius: 8px; background-color: #f0fdf4; margin-bottom: 10px; border: 1px dashed #22c55e; color: #166534; }
     .admin-box { padding: 12px; border-radius: 8px; background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; margin-top: 10px; }
+    .trial-box { padding: 10px; border-radius: 8px; background-color: #fef3c7; border: 1px solid #fde68a; color: #92400e; margin-bottom: 15px; text-align: center; font-weight: bold; }
+    .pay-box { padding: 20px; border-radius: 12px; background-color: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; text-align: center; }
+    .room-btn { margin-bottom: 5px; }
     </style>
 """, unsafe_allow_html=True)
+
+# إعداد مكتبة Stripe بالمفتاح السري لشركتكِ
+stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
 # دالة مساعدة للاتصال بقاعدة بيانات Supabase عبر REST API
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -36,9 +44,10 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
             response = requests.get(url, headers=headers, params=params)
         elif method == "POST":
             response = requests.post(url, headers=headers, json=json_data)
+        elif method == "PATCH":
+            response = requests.patch(url, headers=headers, json=json_data, params=params)
         return response.json()
     except Exception as e:
-        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
         return []
 
 # 2. تهيئة حالات الذاكرة المؤقتة للمتصفح الحالي
@@ -46,17 +55,24 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
-if "current_messages" not in st.session_state:
-    st.session_state.current_messages = []
+if "is_subscribed" not in st.session_state:
+    st.session_state.is_subscribed = False
+if "days_left" not in st.session_state:
+    st.session_state.days_left = 0
+
+# تهيئة مخزن الغرف المتعددة في الذاكرة الحالية
+if "chat_rooms" not in st.session_state:
+    st.session_state.chat_rooms = {"محادثة افتراضية 1": []}
+if "active_room" not in st.session_state:
+    st.session_state.active_room = "محادثة افتراضية 1"
 
 # 3. شاشة إدارة الحسابات السحابية (تسجيل دخول / إنشاء حساب جديد)
 if not st.session_state.logged_in:
-    st.title("🔐 بوابة الوصول للمنصة العالمية")
-    st.write("مرحباً بكِ في فضاء عملكِ السحابي المحمي")
+    st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
+    st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
     
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول", "📝 إنشاء حساب جديد"])
     
-    # قسم تسجيل الدخول وقراءة البيانات من السيرفر
     with tab1:
         with st.container():
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
@@ -69,20 +85,31 @@ if not st.session_state.logged_in:
                 if username_input == "admin" and password_input == "admin123":
                     st.session_state.logged_in = True
                     st.session_state.username = "admin"
+                    st.session_state.is_subscribed = True
                     st.success("تم دخول المسؤولة بنجاح!")
                     st.rerun()
                 else:
-                    # فحص الحساب في قاعدة البيانات السحابية الحقيقية Supabase
                     user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
-                    if user_data and user_data[0]["password_hash"] == password_input:
+                    if user_data and user_data["password_hash"] == password_input:
+                        u = user_data
                         st.session_state.logged_in = True
                         st.session_state.username = username_input
-                        st.success(f"تم تسجيل الدخول بنجاح! مرحباً {username_input}")
+                        
+                        trial_end = datetime.fromisoformat(u["trial_end_date"].replace("Z", "+00:00"))
+                        now = datetime.now(timezone.utc)
+                        delta = (trial_end - now).days + 1
+                        st.session_state.days_left = max(0, delta)
+                        
+                        if u["subscription_status"] == "active" or st.session_state.days_left > 0:
+                            st.session_state.is_subscribed = True
+                        else:
+                            st.session_state.is_subscribed = False
+                            
+                        st.success(f"مرحباً بك مجدداً {username_input}!")
                         st.rerun()
                     else:
                         st.error("اسم المستخدم أو كلمة المرور غير صحيحة!")
                     
-    # قسم إنشاء حساب جديد وحفظه سحابياً للأبد
     with tab2:
         with st.container():
             st.markdown('<div class="login-box">', unsafe_allow_html=True)
@@ -95,102 +122,67 @@ if not st.session_state.logged_in:
                 if not new_username or not new_password:
                     st.error("الرجاء ملء جميع الحقول أولاً!")
                 else:
-                    # التحقق أولاً من عدم تكرار الاسم في السيرفر
                     check_user = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{new_username}"})
                     if check_user:
-                        st.error("اسم المستخدم هذا مسجل مسبقاً عالمياً! اختر اسماً آخر.")
+                        st.error("اسم المستخدم هذا مسجل مسبقاً! اختر اسماً آخر.")
                     else:
-                        # إدخال الحساب الجديد تلقائياً وحفظه في الجدول السحابي للأبد مع فترة 7 أيام تجريبية
-                        new_user_payload = {
-                            "username": new_username,
-                            "password_hash": new_password,
-                            "subscription_status": "trial"
-                        }
-                        supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
-                        st.success("🎉 تم إنشاء حسابكِ السحابي وحفظه بنجاح! يمكنكِ الآن الدخول من تبويب تسجيل الدخول.")
+                        try:
+                            customer = stripe.Customer.create(description=f"User: {new_username}")
+                            new_user_payload = {
+                                "username": new_username,
+                                "password_hash": new_password,
+                                "subscription_status": "trial",
+                                "stripe_customer_id": customer.id
+                            }
+                            supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
+                            st.success("🎉 تم إنشاء حسابك وحفظه بنجاح! اذهب لتبويب (تسجيل الدخول) للبدء فوراً.")
+                        except Exception as e:
+                            st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
 
-# 4. شاشة المحادثة والملفات السحابية (بعد الدخول)
+# 4. الشاشات بعد الدخول بنجاح (تفحص صلاحية الاشتراك)
 else:
-    st.title("💬 غرف المحادثات الاحترافية العالمية")
-    st.write(f"مرحباً بكِ يا *{st.session_state.username}* في المنصة السحابية المؤمنة")
-
-    # جلب مفتاح الـ API لـ Gemini من الإعدادات الآمنة
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('models/gemini-3.6-flash')
-
-    # القائمة الجانبية الزاهية (Sidebar)
-    with st.sidebar:
-        st.markdown(f"👤 الحساب الحالي: *{st.session_state.username}*")
-        st.markdown("---")
+    if not st.session_state.is_subscribed:
+        st.title("💳 انتهت الفترة التجريبية المجانية")
+        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3><p>يرجى الاشتراك لتفعيل الحساب ومتابعة استخدام ميزات المساعد الذكي ورفع الملفات الفائقة.</p></div>", unsafe_allow_html=True)
         
-        # لوحة تحكم الـ Admin الحقيقية لقراءة المشتركين من قاعدة البيانات السحابية مباشرة
-        if st.session_state.username == "admin":
-            st.markdown("### 👑 لوحة تحكم المسؤولة (Supabase)")
-            st.markdown('<div class="admin-box"><b>المشتركين المسجلين في السيرفر للأبد:</b></div>', unsafe_allow_html=True)
-            all_users = supabase_request("users_subscriptions", "GET")
-            if all_users:
-                for u in all_users:
-                    st.write(f"• {u['username']} ({u['subscription_status']})")
-            else:
-                st.write("• لا يوجد مستخدمين مسجلين بعد.")
-            st.markdown("---")
-        
-        # ميزة رفع الملفات والصور
-        st.markdown("### 📂 تحليل الملفات والصور")
-        uploaded_file = st.file_uploader("ارفع ملف أو صورة للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
-        
-        file_context = ""
-        if uploaded_file is not None:
-            st.markdown('<div class="file-box">✅ تم تحميل الملف بنجاح! يمكنك الاستفسار عنه الآن.</div>', unsafe_allow_html=True)
-            if uploaded_file.type == "text/plain":
-                file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
-            elif uploaded_file.type == "application/pdf":
-                file_context = f"\n[مكتبة النظام]: تم إرفاق ملف PDF باسم ({uploaded_file.name}). يرجى مساعدتي في تحليل محتواه والإجابة عنه."
-            else:
-                st.image(uploaded_file, caption="المعاينة المرفوعة", use_container_width=True)
-                file_context = "\n[ملاحظة بصريّة]: تم إرفاق صورة مع المحادثة، يرجى تحليلها والإجابة بدقة."
-
-        st.markdown("---")
-        st.markdown("### 🛠️ أدوات التحكم")
-        
-        if st.button("🗑️ مسح هذه المحادثة", use_container_width=True):
-            st.session_state.current_messages = []
-            st.rerun()
+        try:
+            user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
+            customer_id = user_data["stripe_customer_id"] if user_data else None
             
-        if st.button("🚪 تسجيل الخروج", use_container_width=True):
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{'price': st.secrets["STRIPE_PRICE_ID"], 'quantity': 1}],
+                mode='subscription',
+                customer=customer_id,
+                success_url=st.secrets.get("SUPABASE_URL", "https://stripe.com"),
+                cancel_url="https://stripe.com",
+            )
+            st.markdown(f"<br><a href='{session.url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 اضغط هنا للدفع الآمن عبر Stripe وتفعيل الحساب</button></a>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"خطأ في إنشاء رابط الدفع: {e}")
+            
+        if st.button("🚪 العودة للخارج", use_container_width=True):
             st.session_state.logged_in = False
-            st.session_state.username = ""
-            st.session_state.current_messages = []
             st.rerun()
 
-    # عرض المحادثة الحالية للمستخدم
-    for message in st.session_state.current_messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    else:
+        st.title("💬 غرف المحادثات الاحترافية العالمية")
+        
+        if st.session_state.username != "admin" and st.session_state.days_left > 0:
+            st.markdown(f"<div class='trial-box'>⏱️ أنت الآن في الفترة التجريبية المجانية! متبقي لكِ: {st.session_state.days_left} أيام كاملة الميزات.</div>", unsafe_allow_html=True)
+        elif st.session_state.username != "admin":
+            st.markdown("<div class='trial-box' style='background-color:#dcfce7; border-color:#86efac; color:#166534;'>✅ اشتراكك مفعّل وحسابك بريميوم بالكامل!</div>", unsafe_allow_html=True)
 
-    # استقبال المدخلات والدمج مع الملف المرفوع
-    if user_input := st.chat_input("اكتب استفسارك هنا..."):
-        full_prompt = user_input + file_context if file_context else user_input
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        with st.chat_message("user"):
-            st.write(user_input)
-        st.session_state.current_messages.append({"role": "user", "content": user_input})
-
-        with st.chat_message("assistant"):
-            with st.spinner("جاري التحليل والتفكير..."):
-                try:
-                    formatted_history = []
-                    for msg in st.session_state.current_messages[:-1]:
-                        role = "user" if msg["role"] == "user" else "model"
-                        formatted_history.append({"role": role, "parts": [msg["content"]]})
-                    
-                    chat = model.start_chat(history=formatted_history)
-                    response = chat.send_message(full_prompt)
-                    bot_response = response.text
-                    
-                    st.write(bot_response)
-                    st.session_state.current_messages.append({"role": "assistant", "content": bot_response})
-                    
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء الاتصال بالخادم: {e}")
+        # القائمة الجانبية المحدثة (Sidebar)
+        with st.sidebar:
+            st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
+            st.markdown("---")
+            
+            # ميزة الغرف المتعددة الجديدة (Multi-Chat Rooms)
+            st.markdown("### 🗂️ غرف المحادثة الحالية")
+            
+            # زر إنشاء غرفة محادثة جديدة
+            new_room_name = st.text_input("➕ اسم الغرفة الجديدة", placeholder="اكتب اسم الغرفة واضغط إنتر...")
