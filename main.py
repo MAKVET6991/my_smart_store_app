@@ -4,14 +4,13 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة
+# 1. إعداد عنوان وتصميم الصفحة بألوان زاهية ومشرقة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="centered"
 )
 
-# تنسيق المظهر العصري الزاهي والمبهج
 st.markdown("""
     <style>
     .stApp { background-color: #f8fafc; color: #1e293b; }
@@ -26,10 +25,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مكتبة Stripe بالمفتاح السري لشركتكِ
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# دالة مساعدة للاتصال بقاعدة بيانات Supabase عبر REST API
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     url = f"{st.secrets['SUPABASE_URL']}/rest/v1/{endpoint}"
     headers = {
@@ -49,7 +46,6 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except Exception as e:
         return []
 
-# 2. تهيئة حالات الذاكرة المؤقتة للمتصفح الحالي
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -59,15 +55,11 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة إجبارية وتلقائية للغرفة لمنع الشاشة الفارغة
-if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
-    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
-if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
-    st.session_state.active_room = "المحادثة الرئيسية 🌟"
-if "voice_text" not in st.session_state:
-    st.session_state.voice_text = ""
+# تهيئة الغرفة بشكل إجباري ومباشر في كل دورة تشغيل
+if "current_messages" not in st.session_state:
+    st.session_state.current_messages = []
 
-# 3. بوابة الوصول وإدارة الحسابات السحابية
+# 3. بوابة الوصول وإدارة الحسابات
 if not st.session_state.logged_in:
     st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
     st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
@@ -136,15 +128,15 @@ if not st.session_state.logged_in:
                                 "stripe_customer_id": customer.id
                             }
                             supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
-                            st.success("🎉 تم إنشاء حسابك وحفظه بنجاح! اذهب لتبويب (تسجيل الدخول) للبدء فوراً.")
+                            st.success("🎉 تم إنشاء حسابك وحفظه بنجاح! اذهب لتبويب (تسجيل الدخول).")
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء تهيئة الحساب المالي: {e}")
 
-# 4. الشاشات بعد الدخول بنجاح
+# 4. غرف المحادثة والشات المباشر المضمون
 else:
     if not st.session_state.is_subscribed:
         st.title("💳 انتهت الفترة التجريبية المجانية")
-        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3><p>يرجى الاشتراك لتفعيل الحساب ومتابعة استخدام ميزات المساعد الذكي.</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3></div>", unsafe_allow_html=True)
         
         try:
             user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
@@ -158,29 +150,47 @@ else:
                 success_url=st.secrets.get("SUPABASE_URL", "https://stripe.com"),
                 cancel_url="https://stripe.com",
             )
-            st.markdown(f"<br><a href='{session.url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 اضغط هنا للدفع الآمن عبر Stripe وتفعيل الحساب</button></a>", unsafe_allow_html=True)
+            st.markdown(f"<br><a href='{session.url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
         except Exception as e:
             st.error(f"خطأ في إنشاء رابط الدفع: {e}")
-            
-        if st.button("🚪 العودة للخارج", use_container_width=True):
-            st.session_state.logged_in = False
-            st.rerun()
-
     else:
-        # عرض شريط التنبيه بالأيام المتبقية للمشتركين العاديين
-        if st.session_state.username != "admin" and st.session_state.days_left > 0:
-            st.markdown(f"<div class='trial-box'>⏱️ أنت الآن في الفترة التجريبية المجانية! متبقي لكِ: {st.session_state.days_left} أيام كاملة الميزات.</div>", unsafe_allow_html=True)
-        elif st.session_state.username != "admin":
-            st.markdown("<div class='trial-box' style='background-color:#dcfce7; border-color:#86efac; color:#166534;'>✅ اشتراكك مفعّل وحسابك بريميوم بالكامل!</div>", unsafe_allow_html=True)
-
+        st.title("💬 غرف المحادثات الاحترافية العالمية")
+        
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # القائمة الجانبية المستقرة
         with st.sidebar:
-            st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
+            st.markdown(f"👤 الحساب الحالي: *{st.session_state.username}*")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة المبسطة
-            st.markdown("### 🗂️ غرف المحادثة الحالية")
-            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
+            if st.session_state.username == "admin":
+                st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
+                all_users = supabase_request("users_subscriptions", "GET")
+                if all_users:
+                    for u in all_users:
+                        st.write(f"• *{u['username']}* ({u['subscription_status']})")
+                st.markdown("---")
+            
+            st.markdown("### 📂 تحليل الملفات والصور")
+            uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
+            file_context = ""
+            if uploaded_file is not None:
+                st.success("✅ تم تحميل الملف بنجاح!")
+                if uploaded_file.type == "text/plain":
+                    file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
+
+            st.markdown("---")
+            if st.button("🗑️ مسح المحادثة", use_container_width=True):
+                st.session_state.current_messages = []
+                st.rerun()
+                
+            if st.button("🚪 تسجيل الخروج", use_container_width=True):
+                st.session_state.logged_in = False
+                st.session_state.username = ""
+                st.rerun()
+
+        # عرض المحادثة تلقائياً وصندوق الشات بالأسفل مباشرة
+        st.markdown("### 🌟 غرفة المحادثة الرئيسية النشطة")
+        for message in st.session_state.current_messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
