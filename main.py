@@ -11,13 +11,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم عصري وآمن 100% يضمن ظهور صندوق المحادثة وكافة العناصر بوضوح
+# 2. تحسينات التصميم الآمنة والمضمونة لظهور صندوق الشات وكافة الحقول
 st.markdown("""
     <style>
-    .stApp { background-color: #0f172a; color: #f1f5f9; font-family: system-ui, sans-serif; }
+    /* تحسين الخطوط والعناوين فقط دون تغيير ألوان الخلفيات الأساسية لمنع الاختفاء */
+    h1, h2, h3 { text-align: center !important; font-weight: 700 !important; }
+    p { text-align: center !important; }
+    
+    /* صناديق الإحصاءات الفاخرة لوحة المسؤول */
     .dashboard-card { background-color: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; }
     .dashboard-card h3 { color: #94a3b8 !important; font-size: 1.1rem !important; }
     .dashboard-card h2 { color: #38bdf8 !important; font-size: 2rem !important; margin-top: 5px !important; }
+    
+    /* تحسين مظهر صناديق الدخول لحساب جديد والولوج */
     .login-box { background-color: #1e293b; padding: 30px; border-radius: 16px; border: 1px solid #334155; max-width: 500px; margin: 0 auto; }
     </style>
 """, unsafe_allow_html=True)
@@ -92,15 +98,17 @@ def render_admin_dashboard():
         ]
         st.dataframe(mock_data, use_container_width=True)
 
-# دالة عرض واجهة شات المستخدم الأصلي
+# 💡 دالة عرض واجهة شات المستخدم النظيفة والمضمونة لظهور صندوق الإدخال بشكل كامل
 def render_user_chat():
-    st.title(f"💬 الغرفة: {st.session_state.active_room}")
+    st.markdown(f"## 💬 الغرفة الحالية: {st.session_state.active_room}")
     
+    # عرض الرسائل بالنظام الأصلي لـ Streamlit
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا...")
+    # صندوق إدخال نص المحادثة المدمج والآمن ضد الاختفاء
+    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا وسترى النص بوضوح...")
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         with st.chat_message("user"):
@@ -108,7 +116,7 @@ def render_user_chat():
             
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري التفكير وتوليد الإجابة..."):
+                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
                     try:
                         response = model.generate_content(user_input)
                         ai_reply = response.text
@@ -184,7 +192,7 @@ if not st.session_state.logged_in:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
-                # معالجة آمنة للحسابات المسترجعة بداخل قائمة من قاعدة البيانات
+                # معالجة استخراج قاموس المستخدم بشكل خطي آمن
                 if isinstance(user_data, list) and len(user_data) > 0:
                     user_data = user_data[0]
                 
@@ -201,10 +209,3 @@ if not st.session_state.logged_in:
         st.markdown('<div class="login-box">', unsafe_allow_html=True)
         reg_user = st.text_input("👤 اختر اسم مستخدم جديد", key="u_reg").strip()
         reg_pass = st.text_input("🔒 اختر كلمة مرور قوية", type="password", key="p_reg")
-        btn_reg = st.button("✨ إنتاج وتفعيل الحساب فوراً", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if btn_reg and reg_user and reg_pass:
-            res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
-            if isinstance(res, list) and len(res) > 0:
-                st.error("❌ اسم المستخدم مسجل مسبقاً!")
