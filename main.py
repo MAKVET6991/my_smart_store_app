@@ -139,6 +139,10 @@ if not st.session_state.logged_in:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
+                # معالجة آمنة لفك محتوى قائمة الحساب القديم بدقة تامة
+                if isinstance(user_data, list) and len(user_data) > 0:
+                    user_data = user_data[0]
+                
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -176,12 +180,8 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-# --- بعد تسجيل الدخول بنجاح ---
+# --- معالجة شاشات العرض الموحدة والآمنة بعد تسجيل الدخول بنجاح لمنع خطأ الـ Indentation ---
 else:
-    # تهيئة حقل الرفع والرسائل بشكل موحد للجميع لتجنب كسر واجهة الألوان
-    uploaded_file = None
-    user_input = None
-    
     # 👑 إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نمنحه التبويبات المتكاملة الشاملة
     if st.session_state.username == "admin":
         admin_tab1, admin_tab2 = st.tabs(["📊 لوحة الإدارة والإحصاءات", "💬 صفحة الدردشة والمحادثة للادمن"])
@@ -205,13 +205,10 @@ else:
             
         with admin_tab2:
             st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
-            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي للتحليل (خاص بالادمن):", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
+            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل (خاص بالادمن):", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
             
             for msg in st.session_state.chat_rooms[st.session_state.active_room]:
                 with st.chat_message(msg["role"]):
                     st.write(msg["content"])
             
             user_input = st.chat_input("💡 اكتب سؤالك كرئيس للمنصة وسيجيبك الذكاء الاصطناعي فورا...", key="admin_input")
-
-    # 👤 إذا كان الحساب المفتوح مستخدم عادي (مثل حساب malek)، تفتح واجهة الشات المباشرة فوراً
-    else:
