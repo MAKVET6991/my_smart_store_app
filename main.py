@@ -177,12 +177,11 @@ else:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # القائمة الجانبية الذكية والمعدلة بالكامل (Sidebar)
+        # القائمة الجانبية الذكية (Sidebar)
         with st.sidebar:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة الموزونة بالمسافات القياسية
+            # ميزة الغرف المتعددة المباشرة بدون معوقات مسافات
             st.markdown("### 🗂️ غرف المحادثة الحالية")
-            
-            with st.form("new_room_form", clear_on_submit=True):
+            room_input = st.text_input("➕ اسم الغرفة الجديدة:", key="new_room_title_input")
