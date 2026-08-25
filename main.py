@@ -1,84 +1,4 @@
-[12:14 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
-st.markdown("""
-    <style>
-    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
-    p { text-align: center !important; color: #94a3b8; }
-    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
-[12:15 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
-st.markdown("""
-    <style>
-    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
-    p { text-align: center !important; color: #94a3b8; }
-    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
-[12:17 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
-st.markdown("""
-    <style>
-    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
-    p { text-align: center !important; color: #94a3b8; }
-    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-ra…
-[12:21 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل والتصميم العصري (UI/UX)
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# تنسيقات الألوان الاحترافية ولون خط أبيض ناصع لحقل الكتابة
-st.markdown("""
-    <style>
-    .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
-    p { text-align: center !important; color: #94a3b8; }
-    .login-container { max-width: 450px; margin: 40px auto; padding: 30px; background: #1e293b; border-radius: 12px; border: …
-[12:25 AM, 8/26/2026] Malik Mohamed: import streamlit as st
+import streamlit as st
 import google.generativeai as genai
 import requests
 import stripe
@@ -95,58 +15,14 @@ st.set_page_config(
 st.markdown("""
     <style>
     /* خلفية داكنة مريحة للعين */
-    .stApp { background-color: #0b0f19; color: #f1f5f9; }
-    
-    /* تنسيق كروت الرسائل لتظهر بشكل بارز */
-    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; }
-    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px …
-[12:26 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل الأساسي
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# 2. تصميم احترافي، عصري وآمن تماماً لا يخفي أي عنصر
-st.markdown("""
-    <style>
-    /* خلفية داكنة مريحة للعين */
-    .stApp { background-color: #0b0f19; color: #f1f5f9; }
-    
-    /* تنسيق كروت الرسائل لتظهر بشكل بارز */
-    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; text-align: right; }
-    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px;…
-[12:27 AM, 8/26/2026] Malik Mohamed: import streamlit as st
-import google.generativeai as genai
-import requests
-import stripe
-from datetime import datetime, timezone, timedelta
-
-# 1. إعدادات الهيكل الأساسي
-st.set_page_config(
-    page_title="منصة المحادثة الاحترافية الذكية", 
-    page_icon="🤖", 
-    layout="wide"
-)
-
-# 2. تصميم احترافي، عصري وآمن تماماً لا يخفي أي عنصر
-st.markdown("""
-    <style>
-    /* خلفية داكنة مريحة للعين */
-    .stApp { background-color: #0b0f19; color: #f1f5f9; }
+    .stApp { background-color: #0b0f19; color: #f1f5f9; font-family: system-ui, sans-serif; }
     
     /* تنسيق كروت الرسائل لتظهر بشكل بارز */
     .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; text-align: right; }
     .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #10b981; text-align: right; }
     
-    /* صناديق الإحصاءات الفاخرة لوحة المسؤول */
-    .dashboard-card { background : linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 25px; border-radius: 14px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    /* صناديق الإحصاءات الفاخرة لوحة المسؤول - 🛠️ تم تصحيح النقطتين الرأسيتين هنا */
+    .dashboard-card { background-color: #1e293b; padding: 25px; border-radius: 14px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     .dashboard-card h3 { color: #94a3b8 !important; font-size: 1.1rem !important; }
     .dashboard-card h2 { color: #38bdf8 !important; font-size: 2.2rem !important; margin-top: 10px !important; }
     
@@ -203,11 +79,11 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.markdown(f"👤 *الحساب الحالي:* {st.session_state.username}")
+    st.sidebar.markdown(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
     if st.session_state.username == "admin":
         st.sidebar.success("👑 رتبة: المسؤول العام")
     else:
-        st.sidebar.info(f"⏳ الفترة التجريبية: *{st.session_state.days_left} أيام متبقية*")
+        st.sidebar.info(f"⏳ الفترة التجريبية: **{st.session_state.days_left} أيام متبقية**")
     
     st.sidebar.markdown("---")
     
@@ -225,7 +101,7 @@ if st.session_state.logged_in:
         # عرض وتبديل الغرف بوضوح
         for room in list(st.session_state.chat_rooms.keys()):
             if room == st.session_state.active_room:
-                st.sidebar.markdown(f"🎯 *【 {room} 】*")
+                st.sidebar.markdown(f"🎯 **【 {room} 】**")
             else:
                 if st.sidebar.button(f"📄 {room}", key=f"sidebar_{room}", use_container_width=True):
                     st.session_state.active_room = room
@@ -326,5 +202,6 @@ else:
             st.markdown('<div class="dashboard-card"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
             
         st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
-        # 🛠️ تم تصحيح وزنية مسافات الإزاحة والـ Indentation هنا تماماً ليعمل بنجاح
         if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
+            st.dataframe(all_users_resp, use_container_width=True)
+        else:
