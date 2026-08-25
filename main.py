@@ -4,14 +4,14 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide)
+# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل المريح
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر مع جعل صندوق الشات يتبع النصوص بشكل طبيعي
+# تنسيق المظهر العصري المهدئ للنظر مع رفع صندوق الشات تلقائياً للأعلى
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -19,7 +19,6 @@ st.markdown("""
         border-radius: 12px; 
         border: 2px solid #4f46e5 !important; 
         background-color: #334155 !important;
-        margin-top: 20px !important;
     }
     .stChatInputContainer textarea { color: #ffffff !important; }
     h1, h2, h3 { color: #818cf8 !important; text-align: center !important; font-family: 'Segoe UI', sans-serif; }
@@ -175,25 +174,25 @@ else:
                 user_list = ", ".join([f"{u['username']}({u['subscription_status']})" for u in all_users])
                 st.info(f"المشتركون في السيرفر حالياً: {user_list}")
         
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown("### 🎙️ المساعد الصوتي السريع")
-            audio_value = st.audio_input("اضغط للتحدث:")
-            if audio_value is not None:
-                st.session_state.voice_text = "مرحباً، أود تجربة المساعد الذكي الصوتي للشركة."
-                st.info(f"🎤 تم التقاط الصوت وتحويله لنص: '{st.session_state.voice_text}'")
+        st.markdown("### 🎙️ المساعد الصوتي السريع")
+        audio_value = st.audio_input("اضغط للتحدث بصوتك:")
+        if audio_value is not None:
+            st.session_state.voice_text = "مرحباً، أود تجربة المساعد الذكي الصوتي للشركة."
+            st.info(f"🎤 تم التقاط الصوت وتحويله لنص: '{st.session_state.voice_text}'")
         
-        with col_b:
-            st.markdown("### 📂 تحليل الملفات والصور")
-            uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
-            file_context = ""
-            if uploaded_file is not None:
-                st.success("✅ تم تحميل الملف بنجاح!")
-                if uploaded_file.type == "text/plain":
-                    file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
+        st.markdown("### 📂 تحليل الملفات والصور")
+        uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
+        file_context = ""
+        if uploaded_file is not None:
+            st.success("✅ تم تحميل الملف بنجاح!")
+            if uploaded_file.type == "text/plain":
+                file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
 
         st.markdown("---")
         st.markdown("### 🌟 غرفة المحادثة الرئيسية النشطة")
         
         for message in st.session_state.current_messages:
             with st.chat_message(message["role"]):
+                st.write(message["content"])
+
+        user_input = st.chat_input("اكتب سؤالك واستفسارك هنا وسيجيبك الذكاء الاصطناعي فوراً...")
