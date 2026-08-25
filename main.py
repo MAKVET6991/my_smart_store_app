@@ -11,7 +11,7 @@ GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 3. استخدام موديل هجين وسريع ومجاني ممتاز للمحادثات
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-3.6-flash')
 
 # 4. تهيئة مصفوفة تاريخ المحادثة لمنع التكرار وحفظ الجلسة
 if "messages" not in st.session_state:
