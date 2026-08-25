@@ -18,8 +18,8 @@ st.markdown("""
     .stApp { background-color: #0b0f19; color: #f1f5f9; }
     
     /* تنسيق كروت الرسائل لتظهر بشكل بارز */
-    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; }
-    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #10b981; }
+    .chat-card-user { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #6366f1; text-align: right; }
+    .chat-card-ai { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid #10b981; text-align: right; }
     
     /* صناديق الإحصاءات الفاخرة لوحة المسؤول */
     .dashboard-card { background : linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 25px; border-radius: 14px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -139,7 +139,11 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else res
+                user_data = res if isinstance(res, list) and len(res) > 0 else res
+                
+                # تصحيح استخراج القواميس من القوائم المسترجعة بأمان
+                if isinstance(user_data, list) and len(user_data) > 0:
+                    user_data = user_data[0]
                 
                 if user_data and isinstance(user_data, dict) and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -200,8 +204,3 @@ else:
             
         st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
         if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
-            st.dataframe(all_users_resp, use_container_width=True)
-        else:
-            mock_data = [
-                {"username": "malek", "subscription_status": "trial", "days_left": 7},
-                {"username": "anas", "subscription_status": "trial", "days_left": 5}
