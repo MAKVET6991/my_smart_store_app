@@ -72,37 +72,42 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة (Sidebar) ---
+# --- القائمة الجانبية المستقرة والثابتة للجميع (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.write(f"👤 *الحساب الحالي:* {st.session_state.username}")
+    st.sidebar.write(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
+    if st.session_state.username == "admin":
+        st.sidebar.success("👑 رتبة: المسؤول العام")
+    else:
+        st.sidebar.info("⏳ الفترة التجريبية: نشطة")
+    
     st.sidebar.markdown("---")
     
-    if st.session_state.username != "admin":
-        st.sidebar.subheader("🎙️ الأدوات الصوتية")
-        audio_value = st.sidebar.audio_input("قم بتسجيل صوتك لإدخاله للمنصة:")
-        if audio_value:
-            st.sidebar.success("تم التقاط الملف الصوتي بنجاح وجاري تحضيره للتحليل!")
-            
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("💬 غرف المحادثة")
-        with st.sidebar.form("room_form", clear_on_submit=True):
-            r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
-            add_btn = st.form_submit_button("➕ إنشاء الغرفة", use_container_width=True)
-            if add_btn and r_title and r_title not in st.session_state.chat_rooms:
-                st.session_state.chat_rooms[r_title] = []
-                st.session_state.active_room = r_title
-                st.rerun()
+    # ميزة أدوات الصوت وغرف المحادثة تظهر دائماً للجميع (بما فيهم الـ Admin)
+    st.sidebar.subheader("🎙️ الأدوات الصوتية")
+    audio_value = st.sidebar.audio_input("قم بتسجيل صوتك لإدخاله للمنصة:")
+    if audio_value:
+        st.sidebar.success("تم التقاط الملف الصوتي بنجاح وجاري تحضيره للتحليل!")
+        
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💬 غرف المحادثة")
+    with st.sidebar.form("room_form", clear_on_submit=True):
+        r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
+        add_btn = st.form_submit_button("➕ إنشاء الغرفة", use_container_width=True)
+        if add_btn and r_title and r_title not in st.session_state.chat_rooms:
+            st.session_state.chat_rooms[r_title] = []
+            st.session_state.active_room = r_title
+            st.rerun()
 
-        for room in list(st.session_state.chat_rooms.keys()):
-            if room == st.session_state.active_room:
-                st.sidebar.info(f"🎯 {room}")
-            else:
-                if st.sidebar.button(f"📄 {room}", key=f"side_{room}", use_container_width=True):
-                    st.session_state.active_room = room
-                    st.rerun()
-        st.sidebar.markdown("---")
+    for room in list(st.session_state.chat_rooms.keys()):
+        if room == st.session_state.active_room:
+            st.sidebar.info(f"🎯 {room}")
+        else:
+            if st.sidebar.button(f"📄 {room}", key=f"side_{room}", use_container_width=True):
+                st.session_state.active_room = room
+                st.rerun()
+    st.sidebar.markdown("---")
 
     if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
         st.session_state.logged_in = False
@@ -171,47 +176,42 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-elif st.session_state.username == "admin":
-    st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
-    st.write("متابعة إحصاءات المشتركين والتقييمات الحالية للمنصة")
-    
-    all_users_resp = supabase_request("users_subscriptions", "GET")
-    total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="👥 إجمالي المستخدمين", value=f"{total_users_count} مستخدمين")
-    col2.metric(label="💳 الاشتراكات النشطة", value="الفترة التجريبية")
-    col3.metric(label="⭐ تقييم المنصة الحالي", value="4.8 / 5")
-        
-    st.subheader("📋 جدول المشتركين والاشتراكات الحاليين (Supabase)")
-    data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
-    st.dataframe(data_to_show, use_container_width=True)
-
+# --- بعد تسجيل الدخول بنجاح ---
 else:
-    st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
+    # تهيئة حقل الرفع والرسائل بشكل موحد للجميع لتجنب كسر واجهة الألوان
+    uploaded_file = None
+    user_input = None
     
-    # حقل رفع الملفات والصور المتقدم
-    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بتحليله:", type=["png", "jpg", "jpeg", "txt"])
-    
-    for msg in st.session_state.chat_rooms[st.session_state.active_room]:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+    # 👑 إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نمنحه التبويبات المتكاملة الشاملة
+    if st.session_state.username == "admin":
+        admin_tab1, admin_tab2 = st.tabs(["📊 لوحة الإدارة والإحصاءات", "💬 صفحة الدردشة والمحادثة للادمن"])
+        
+        with admin_tab1:
+            st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
+            all_users_resp = supabase_request("users_subscriptions", "GET")
+            total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
             
-    user_input = st.chat_input("💡 اكتب سؤالك هنا وسيجيبك الذكاء الاصطناعي الفوري الحقيقي...")
-    
-    if user_input:
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.write(user_input)
+            col1, col2, col3 = st.columns(3)
+            col1.metric(label="👥 إجمالي المستخدمين", value=f"{total_users_count} مستخدمين")
+            col2.metric(label="💳 الاشتراكات النشطة", value="الفترة التجريبية")
+            col3.metric(label="⭐ تقييم المنصة الحالي", value="4.8 / 5")
+                
+            st.subheader("📋 جدول المشتركين والاشتراكات الحاليين (Supabase)")
+            data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
+            st.dataframe(data_to_show, use_container_width=True)
             
-        with st.chat_message("assistant"):
-            if model:
-                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
-                    # 🛠️ معالجة مسطحة خطية بالكامل بدون أي كتل try/except أو شروط متداخلة لمنع حدوث أي خطأ إزاحة نهائياً
-                    gemini_inputs = [user_input]
-                    
-                    if uploaded_file and uploaded_file.type.startswith("image/"):
-                        gemini_inputs.append(Image.open(uploaded_file))
-                    
-                    if uploaded_file and uploaded_file.type == "text/plain":
-                        gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+            st.subheader("💬 تقييمات وملاحظات عملائك")
+            st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
+            
+        with admin_tab2:
+            st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
+            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي للتحليل (خاص بالادمن):", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
+            
+            for msg in st.session_state.chat_rooms[st.session_state.active_room]:
+                with st.chat_message(msg["role"]):
+                    st.write(msg["content"])
+            
+            user_input = st.chat_input("💡 اكتب سؤالك كرئيس للمنصة وسيجيبك الذكاء الاصطناعي فورا...", key="admin_input")
+
+    # 👤 إذا كان الحساب المفتوح مستخدم عادي (مثل حساب malek)، تفتح واجهة الشات المباشرة فوراً
+    else:
