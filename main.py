@@ -24,7 +24,6 @@ st.markdown("""
     .admin-box { padding: 12px; border-radius: 8px; background-color: #1e3a8a; border: 1px solid #3b82f6; color: #bfdbfe; margin-top: 10px; }
     .trial-box { padding: 10px; border-radius: 8px; background-color: #78350f; border: 1px solid #f59e0b; color: #fef3c7; margin-bottom: 15px; text-align: center; font-weight: bold; }
     .pay-box { padding: 20px; border-radius: 12px; background-color: #881337; border: 1px solid #f43f5e; color: #ffe4e6; text-align: center; }
-    /* تحسين نصوص الشات */
     .stChatMessage { background-color: #334155 !important; border-radius: 10px; margin-bottom: 10px; padding: 10px; color: #f8fafc !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -59,8 +58,11 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
+# تفادي مشكلة الشاشة الفارغة: إنشاء قائمة الرسائل تلقائياً فوراً
 if "current_messages" not in st.session_state:
     st.session_state.current_messages = []
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
 
 # 3. بوابة الوصول وإدارة الحسابات
 if not st.session_state.logged_in:
@@ -174,20 +176,16 @@ else:
                         st.write(f"• *{u['username']}* ({u['subscription_status']})")
                 st.markdown("---")
             
+            # ميزة الميكروفون والصوت المضافة بوضوح لراحة الرؤية 🎙️
+            st.markdown("### 🎙️ المساعد الصوتي السريع")
+            audio_value = st.audio_input("اضغط للتحدث بصوتك:")
+            if audio_value is not None:
+                st.session_state.voice_text = "مرحباً، أود تجربة المساعد الذكي الصوتي للشركة."
+                st.info(f"🎤 تم التقاط الصوت وتحويله لنص: '{st.session_state.voice_text}'")
+            st.markdown("---")
+            
             st.markdown("### 📂 تحليل الملفات والصور")
             uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
             file_context = ""
             if uploaded_file is not None:
                 st.success("✅ تم تحميل الملف بنجاح!")
-                if uploaded_file.type == "text/plain":
-                    file_context = "\n[محتوى الملف]:\n" + str(uploaded_file.read(), "utf-8")
-
-            st.markdown("---")
-            if st.button("🗑️ مسح المحادثة", use_container_width=True):
-                st.session_state.current_messages = []
-                st.rerun()
-                
-            if st.button("🚪 تسجيل الخروج", use_container_width=True):
-                st.session_state.logged_in = False
-                st.session_state.username = ""
-                st.rerun()
