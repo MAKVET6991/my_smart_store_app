@@ -4,18 +4,25 @@ import requests
 import stripe
 from datetime import datetime, timezone
 
-# 1. إعداد عنوان وتصميم الصفحة بألوان مهدئة ومريحة جداً للعين
+# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide) لإجبار العناصر على الظهور
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
-    layout="centered"
+    layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر (Dark/Soft Theme)
+# تنسيق المظهر العصري المهدئ للنظر مع رفع صندوق الشات تلقائياً للأعلى
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
-    .stChatInputContainer { border-radius: 12px; border: 2px solid #4f46e5 !important; background-color: #334155 !important;}
+    .stChatInputContainer { 
+        border-radius: 12px; 
+        border: 2px solid #4f46e5 !important; 
+        background-color: #334155 !important;
+        position: fixed !important;
+        bottom: 40px !important;
+        z-index: 9999 !important;
+    }
     .stChatInputContainer textarea { color: #ffffff !important; }
     h1, h3 { color: #818cf8 !important; text-align: center; font-family: 'Segoe UI', sans-serif; }
     p { text-align: center; color: #94a3b8; }
@@ -137,7 +144,6 @@ if not st.session_state.logged_in:
 
 # 4. غرف المحادثة والشات المباشر المضمون
 else:
-    # حماية وحساب الرابط المالي للمشتركين العاديين فقط واستثناء الـ admin من فحص المبيعات
     payment_link_url = ""
     if st.session_state.username != "admin" and not st.session_state.is_subscribed:
         try:
@@ -161,17 +167,15 @@ else:
         if payment_link_url:
             st.markdown(f"<br><a href='{payment_link_url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
     else:
-        st.title("💬 غرف المحادثات الاحترافية العالمية")
+        # تقسيم الشاشة برمجياً إلى عمودين عريضين (قائمة جانبية ممتدة وشات عريض جداً)
+        main_col1, main_col2 = st.columns([1, 3])
         
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
-
-        with st.sidebar:
+        with main_col1:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
             if st.session_state.username == "admin":
-                st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
+                st.markdown("### 👑 لوحة تحكم المسؤولة")
                 all_users = supabase_request("users_subscriptions", "GET")
                 if all_users:
                     for u in all_users:
@@ -179,11 +183,11 @@ else:
                 st.markdown("---")
             
             st.markdown("### 🎙️ المساعد الصوتي السريع")
-            audio_value = st.audio_input("اضغط للتحدث بصوتك:")
+            audio_value = st.audio_input("اضغط للتحدث:")
             if audio_value is not None:
                 st.session_state.voice_text = "مرحباً، أود تجربة المساعد الذكي الصوتي للشركة."
                 st.info(f"🎤 تم التقاط الصوت وتحويله لنص: '{st.session_state.voice_text}'")
             st.markdown("---")
             
-            st.markdown("### 📂 تحليل الملفات والصور")
+            st.markdown("### 📂 تحليل الملفات")
             uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
