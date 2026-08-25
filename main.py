@@ -1,57 +1,51 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 
-# إعدادات مظهر واجهة التطبيق
-st.set_page_config(page_title="منصة المحادثات الذكية", page_icon="💬", layout="centered")
-
+# 1. إعداد عنوان الصفحة الافتراضي
+st.set_page_config(page_title="غرف المحادثات الاحترافية للموظفين", page_icon="💬", layout="centered")
 st.title("💬 غرف المحادثات الاحترافية للموظفين")
-st.write("مرحباً بك في النسخة التجريبية الأولى من منصتك الخاصة!")
+st.write("مرحباً بك في النسخة التجريبية الأولى من منصتك الخاصة")
 
-# 💡 ضع مفتاح جوجل الذكي الخاص بك هنا بين علامتي التنصيص
-API_KEY = ""
+# 2. ربط مفتاح الـ API مباشرة بالكود لضمان العمل
+genai.configure(api_key="AIzaSyAbBRN6IhIW02QYNZHe9sr52rEQ0cwgqeVj-R9esgQBUDqmt2CQ")
 
-def get_ai_chat_response(user_query):
-    if not API_KEY or API_KEY == "":
-        return "تنبيه من النظام: يرجى كتابة الـ API Key الخاص بك داخل الكود أولاً لتفعيل المساعد الذكي."
-        
-    url = f"https://googleapis.com{API_KEY}"
-    headers = {"Content-Type": "application/json"}
-    
-    system_instruction = "أنت مساعد ذكي وموظف خارق داخل غرفة محادثات سرية لشركة احترافية. أجب على استفسارات الموظفين والمدراء بأسلوب عملي، ذكي، ومؤدب جداً باللغة العربية."
-    
-    payload = {
-        "contents": [{"parts": [{"text": f"{system_instruction}\n\nرسالة الموظف: {user_query}"}]}]
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        if response.status_code == 200:
-            res_json = response.json()
-            return res_json["candidates"]["content"]["parts"]["text"]
-        return f"خطأ من الخادم (كود {response.status_code}): يرجى التحقق من صلاحية المفتاح."
-    except Exception as e:
-        return f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}"
+# 3. استخدام موديل هجين وسريع ومجاني ممتاز للمحادثات
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# إنشاء ذاكرة مؤقتة لحفظ الرسائل داخل الصفحة
+# 4. تهيئة مصفوفة تاريخ المحادثة لمنع التكرار وحفظ الجلسة
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# عرض الرسائل المتبادلة في الصفحة بشكل منظم
+# 5. عرض المحادثة السابقة بشكل مرتب ومحمي من التكرار
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# صندوق إدخال الرسائل الحي
-user_input = st.chat_input("اكتب رسالتك للموظفين أو للمساعد الذكي هنا...")
+# 6. استقبال المدخلات الجديدة من المستخدم وبدء الذكاء الاصطناعي
+if user_input := st.chat_input("اكتب استفسارك هنا..."):
 
-if user_input:
+    # عرض سؤال المستخدم فوراً وحفظه في الذاكرة
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
-    with st.spinner("جاري تفكير المساعد الذكي..."):
-        ai_reply = get_ai_chat_response(user_input)
-        
+
+    # توليد رد الذكاء الاصطناعي الفعلي بناءً على السياق الحالي والتاريخ
     with st.chat_message("assistant"):
-        st.write(ai_reply)
-    st.session_state.messages.append({"role": "assistant", "content": ai_reply})
+        with st.spinner("جاري التفكير..."):
+            try:
+                # لتذكر السياق كاملاً، يرسل السيرفر كامل المحادثة المخزنة في الذاكرة
+                formatted_history = []
+                for msg in st.session_state.messages[:-1]:
+                    role = "user" if msg["role"] == "user" else "model"
+                    formatted_history.append({"role": role, "parts": [msg["content"]]})
+                
+                # بدء المحادثة مع إرسال تاريخ محادثة صحيح
+                chat = model.start_chat(history=formatted_history)
+                response = chat.send_message(user_input)
+                bot_response = response.text
+                
+                st.write(bot_response)
+                st.session_state.messages.append({"role": "assistant", "content": bot_response})
+                
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء الاتصال بالخادم: {e}")
