@@ -186,7 +186,7 @@ elif st.session_state.username == "admin":
 else:
     st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
     
-    # 📁 رفع الملفات والصور المتقدم
+    # حقل رفع الملفات والصور المتقدم
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بتحليله:", type=["png", "jpg", "jpeg", "txt"])
     
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
@@ -204,14 +204,14 @@ else:
             if model:
                 with st.spinner("جاري قراءة الوسائط وتوليد الإجابة..."):
                     try:
-                        # 🛠️ تم تصحيح وإغلاق البلوك بالكامل هنا بشكل نظيف ومحمي
+                        # 🛠️ معالجة مسطحة ومباشرة 100% لمنع خطأ الإزاحة والـ else المتداخلة نهائياً
+                        gemini_inputs = [user_input]
+                        
                         if uploaded_file and uploaded_file.type.startswith("image/"):
-                            img = Image.open(uploaded_file)
-                            response = model.generate_content([user_input, img])
-                            ai_reply = response.text
+                            gemini_inputs.append(Image.open(uploaded_file))
                         elif uploaded_file and uploaded_file.type == "text/plain":
-                            file_text = uploaded_file.read().decode("utf-8")
-                            combined_prompt = f"الملف المرفق:\n{file_text}\n\nالسؤال: {user_input}"
-                            response = model.generate_content(combined_prompt)
-                            ai_reply = response.text
-                        else:
+                            gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+                        
+                        response = model.generate_content(gemini_inputs)
+                        ai_reply = response.text
+                    except Exception as e:
