@@ -2,16 +2,16 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 import stripe
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
-# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide) لمنع اختفاء العناصر
+# 1. إعداد عنوان وتصميم الصفحة بوضع العرض الكامل (wide)
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="💬", 
     layout="wide"
 )
 
-# تنسيق المظهر العصري المهدئ للنظر مع محاذاة وتوزيع قياسي ممركز للأبعاد
+# تنسيق المظهر العصري المهدئ للنظر
 st.markdown("""
     <style>
     .stApp { background-color: #1e293b; color: #f8fafc; }
@@ -19,7 +19,6 @@ st.markdown("""
         border-radius: 12px; 
         border: 2px solid #4f46e5 !important; 
         background-color: #334155 !important;
-        margin-top: 20px !important;
     }
     .stChatInputContainer textarea { color: #ffffff !important; }
     h1, h2, h3 { color: #818cf8 !important; text-align: center !important; font-family: 'Segoe UI', sans-serif; }
@@ -52,7 +51,6 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except Exception as e:
         return []
 
-# 2. تهيئة حالات الذاكرة المؤقتة للمتصفح الحالي
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -61,8 +59,6 @@ if "is_subscribed" not in st.session_state:
     st.session_state.is_subscribed = False
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
-
-# تهيئة مخزن الغرف المتعددة الذكي والتلقائي
 if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
     st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
@@ -70,7 +66,7 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
-# 3. بوابة الوصول وإدارة الحسابات السحابية
+# 3. بوابة الوصول وإدارة الحسابات
 if not st.session_state.logged_in:
     st.title("🔐 بوابة الوصول للمنصة العالمية المدفوعة")
     st.write("سجّل حسابك الآن للحصول على 7 أيام تجريبية مجانية كاملة الميزات")
@@ -94,20 +90,24 @@ if not st.session_state.logged_in:
             else:
                 user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{username_input}"})
                 if user_data and user_data["password_hash"] == password_input:
-                    u = user_data
                     st.session_state.logged_in = True
                     st.session_state.username = username_input
                     
-                    trial_end = datetime.fromisoformat(u["trial_end_date"].replace("Z", "+00:00"))
-                    now = datetime.now(timezone.utc)
-                    delta = (trial_end - now).days + 1
-                    st.session_state.days_left = max(0, delta)
-                    
-                    if u["subscription_status"] == "active" or st.session_state.days_left > 0:
-                        st.session_state.is_subscribed = True
-                    else:
-                        st.session_state.is_subscribed = False
+                    # معالجة آمنة ومباشرة للوقت لمنع تعليق الحسابات الجديدة
+                    try:
+                        trial_end_str = user_data.get("trial_end_date")
+                        if trial_end_str:
+                            trial_end = datetime.fromisoformat(trial_end_str.replace("Z", "+00:00"))
+                        else:
+                            trial_end = datetime.now(timezone.utc) + timedelta(days=7)
                         
+                        now = datetime.now(timezone.utc)
+                        st.session_state.days_left = max(0, (trial_end - now).days + 1)
+                    except:
+                        st.session_state.days_left = 7
+                    
+                    # تفعيل الحساب تلقائياً طالما في الـ 7 أيام
+                    st.session_state.is_subscribed = True
                     st.success(f"مرحباً بك مجدداً {username_input}!")
                     st.rerun()
                 else:
@@ -130,11 +130,14 @@ if not st.session_state.logged_in:
                 else:
                     try:
                         customer = stripe.Customer.create(description=f"User: {new_username}")
+                        # حفظ تاريخ تجربة افتراضي مباشر لتأمين قاعدة البيانات
+                        future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
                         new_user_payload = {
                             "username": new_username,
                             "password_hash": new_password,
                             "subscription_status": "trial",
-                            "stripe_customer_id": customer.id
+                            "stripe_customer_id": customer.id,
+                            "trial_end_date": future_trial
                         }
                         supabase_request("users_subscriptions", "POST", json_data=new_user_payload)
                         st.success("🎉 تم إنشاء حسابك بنجاح! اذهب لتبويب (تسجيل الدخول).")
@@ -144,7 +147,8 @@ if not st.session_state.logged_in:
 # 4. تشغيل ميزات المنصة بالكامل بعد الدخول
 else:
     payment_link_url = ""
-    if st.session_state.username != "admin" and not st.session_state.is_subscribed:
+    if st.session_state.username != "admin" and st.session_state.days_left <= 0:
+        st.session_state.is_subscribed = False
         try:
             user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
             customer_id = user_data["stripe_customer_id"] if user_data else None
@@ -170,9 +174,8 @@ else:
         st.write(f"👤 الحساب الحالي: **{st.session_state.username}**")
         
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('models/gemini-3.6-flash')
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # لوحة تحكم المسؤولة (أدمن) تظهر في الأعلى ممركزة بوضوح
         if st.session_state.username == "admin":
             st.markdown("### 👑 لوحة تحكم المسؤولة (Stripe)")
             all_users = supabase_request("users_subscriptions", "GET")
@@ -182,7 +185,6 @@ else:
 
         st.markdown("---")
 
-        # توزيع الميزات الثلاث (الغرف، الصوت، الملفات) بالتساوي في 3 أعمدة أفقية لتأخذ كامل عرض الشاشة
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -193,6 +195,3 @@ else:
             if create_room_btn and room_input.strip():
                 r_title = room_input.strip()
                 if r_title not in st.session_state.chat_rooms:
-                    st.session_state.chat_rooms[r_title] = []
-                st.session_state.active_room = r_title
-                st.rerun()
