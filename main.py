@@ -170,7 +170,7 @@ else:
         st.write(f"👤 الحساب الحالي: **{st.session_state.username}**")
         
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-3.6-flash')
 
         # لوحة تحكم المسؤولة (أدمن) تظهر في الأعلى ممركزة بوضوح
         if st.session_state.username == "admin":
