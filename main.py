@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# تنسيقات الألوان الاحترافية لمنع اختفاء أي عنصر ولون خط أبيض ناصع لحقل الكتابة
+# تنسيقات الألوان الاحترافية ولون خط أبيض ناصع لحقل الكتابة
 st.markdown("""
     <style>
     .stApp { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
@@ -42,7 +42,7 @@ try:
 except:
     model = None
 
-# دالة الاستدعاء المحمية من Supabase
+# دالة الاستدعاء المعدلة والمضمونة لجلب بيانات المستخدمين
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -83,11 +83,11 @@ if "active_room" not in st.session_state or st.session_state.active_room not in 
 st.sidebar.title("📁 التحكم والمنصة")
 
 if st.session_state.logged_in:
-    st.sidebar.markdown(f"👤 *الحساب:* {st.session_state.username}")
+    st.sidebar.markdown(f"👤 **الحساب:** {st.session_state.username}")
     if st.session_state.username == "admin":
-        st.sidebar.markdown("⭐ *الرتبة:* مسؤول النظام العام")
+        st.sidebar.markdown("⭐ **الرتبة:** مسؤول النظام العام")
     else:
-        st.sidebar.markdown(f"⏳ المتبقي المالي: *{st.session_state.days_left}* يوم")
+        st.sidebar.markdown(f"⏳ المتبقي المالي: **{st.session_state.days_left}** يوم")
     
     st.sidebar.markdown("---")
     
@@ -142,12 +142,30 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else res
-                if user_data and isinstance(user_data, dict) and user_data.get("password_hash") == pass_in:
+                
+                # 🛠️ الحل النهائي والأكيد: استخراج الحساب الصحيح سواء رجعت الاستجابة كقائمة أو قاموس
+                user_data = None
+                if isinstance(res, list) and len(res) > 0:
+                    user_data = res[0]
+                elif isinstance(res, dict):
+                    user_data = res
+                
+                # مطابقة البيانات الحقيقية المستخرجة والسماح للمستخدم بالولوج
+                if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.session_state.is_subscribed = True
-                    st.session_state.days_left = 7
+                    
+                    try:
+                        trial_end_str = user_data.get("trial_end_date")
+                        if trial_end_str:
+                            trial_end = datetime.fromisoformat(trial_end_str.replace("Z", "+00:00"))
+                        else:
+                            trial_end = datetime.now(timezone.utc) + timedelta(days=7)
+                        now = datetime.now(timezone.utc)
+                        st.session_state.days_left = max(0, (trial_end - now).days + 1)
+                    except:
+                        st.session_state.days_left = 7
                     st.rerun()
                 else:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
@@ -183,16 +201,6 @@ if not st.session_state.logged_in:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
 else:
-    # 👑 أولاً: لوحة المسؤول المحمية تماماً ضد الاختفاء (Admin Dashboard)
+    # 👑 أولاً: لوحة المسؤول (Admin Dashboard)
     if st.session_state.username == "admin":
         st.markdown("<h1>📊 لوحة تحكم المسؤول العام (Admin)</h1>", unsafe_allow_html=True)
-        st.markdown("<p>متابعة جداول وبيانات المستخدمين والاشتراكات والتقييمات من قاعدة البيانات</p>", unsafe_allow_html=True)
-        
-        # محاولة جلب البيانات الحقيقية بأمان من قاعدة البيانات
-        all_users_resp = supabase_request("users_subscriptions", "GET")
-        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
-        
-        # 🛠️ التعديل الجذري: عرض البطاقات بشكل مسطح مباشر ومضمون بدون تفريع لضمان اختفاء خطأ السطر 203 نهائياً
-        st.markdown(f'<div class="stat-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count}</h2></div>', unsafe_allow_html=True)
-        st.markdown('<div class="stat-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
-        st.markdown('<div class="stat-box"><h3>⭐ تقييم التطبيق</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
