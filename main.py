@@ -4,24 +4,21 @@ import requests
 import stripe
 from datetime import datetime, timezone, timedelta
 
-# 1. إعداد هيكل الصفحة الأساسي بتصميم العرض الكامل
+# 1. إعداد هيكل الصفحة الأساسي
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
-# 2. هندسة التصميم والمظهر العصري (CSS) ليحاكي المنصات العالمية
+# 2. تنسيق المظهر العصري (CSS) بأسلوب المنصات العالمية
 st.markdown("""
     <style>
-    /* تحسين الخلفية العامة والخطوط */
     .stApp { 
         background-color: #0f172a; 
         color: #e2e8f0; 
         font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
     }
-    
-    /* تحسين تصميم العناوين والنصوص */
     h1, h2, h3 { 
         color: #f1f5f9 !important; 
         text-align: center !important; 
@@ -31,8 +28,6 @@ st.markdown("""
         text-align: center !important;
         color: #94a3b8; 
     }
-    
-    /* صندوق الدخول المطور */
     .login-container {
         max-width: 480px;
         margin: 40px auto;
@@ -42,8 +37,6 @@ st.markdown("""
         border: 1px solid #334155;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
-    
-    /* شريط المحادثة السفلي العصري */
     .stChatInputContainer { 
         border-radius: 14px !important; 
         border: 1px solid #4f46e5 !important; 
@@ -52,7 +45,6 @@ st.markdown("""
     }
     .stChatInputContainer textarea { color: #f8fafc !important; }
     
-    /* غرف المحادثة الجانبية */
     .room-active { 
         background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important; 
         color: #ffffff !important; 
@@ -61,10 +53,7 @@ st.markdown("""
         padding: 12px; 
         text-align: right; 
         margin-bottom: 8px;
-        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
     }
-    
-    /* بطاقات الرسائل */
     .stChatMessage { 
         background-color: #1e293b !important; 
         border-radius: 12px !important; 
@@ -72,19 +61,16 @@ st.markdown("""
         padding: 14px !important; 
         margin-bottom: 12px !important;
     }
-    
-    /* تحسين أزرار القائمة الجانبية */
     .stButton>button {
         border-radius: 10px !important;
-        transition: all 0.2s ease-in-out !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفتاح ماستر لـ Stripe
+# إعداد مفتاح Stripe
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# دالة التعامل المحترفة والآمنة مع قاعدة بيانات Supabase
+# دالة التعامل المحدثة والآمنة مع قاعدة بيانات Supabase لمنع تعليق الصفحة البيضاء
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     url = f"{st.secrets['SUPABASE_URL']}/rest/v1/{endpoint}"
     headers = {
@@ -102,13 +88,16 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
             response = requests.patch(url, headers=headers, json=json_data, params=params)
         
         res_json = response.json()
-        if isinstance(res_json, list) and len(res_json) > 0:
-            return res_json[0] # إرجاع المستخدم الأول مباشرة
+        # معالجة آمنة: إذا كانت الاستجابة قائمة تحتوي على عناصر، نأخذ العنصر الأول فوراً
+        if isinstance(res_json, list):
+            if len(res_json) > 0:
+                return res_json[0]
+            return None
         return res_json
     except Exception as e:
         return None
 
-# تهيئة متغيرات الحفاظ على حالة الجلسة (Session State)
+# تهيئة متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -122,7 +111,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "✨ المحادثة الرئيسية 🌟"
 
-# --- الحالة الأولى: المستخدم لم يسجل دخوله بعد (عرض صفحة الدخول فقط ونخفي القائمة الجانبية تماماً) ---
+# --- الحالة الأولى: المستخدم لم يسجل دخوله بعد ---
 if not st.session_state.logged_in:
     st.markdown("<h1 style='margin-top: 50px;'>⚡ المنصة الذكية المتكاملة</h1>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 1.1rem;'>سجل دخولك الآن للوصول إلى أدوات الذكاء الاصطناعي الفائقة</p>", unsafe_allow_html=True)
@@ -198,14 +187,14 @@ if not st.session_state.logged_in:
                     except Exception as e:
                         st.error(f"حدث خطأ أثناء الإعداد: {e}")
 
-# --- الحالة الثانية: تم تسجيل الدخول بنجاح (تظهر الميزات والرسائل وزر الخروج بالكامل) ---
+# --- الحالة الثانية: تم تسجيل الدخول بنجاح ---
 else:
     payment_link_url = ""
     if st.session_state.username != "admin" and st.session_state.days_left <= 0:
         st.session_state.is_subscribed = False
         try:
             user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
-            customer_id = user_data["stripe_customer_id"] if user_data else None
+            customer_id = user_data.get("stripe_customer_id") if user_data else None
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[{'price': st.secrets["STRIPE_PRICE_ID"], 'quantity': 1}],
@@ -218,7 +207,7 @@ else:
         except:
             pass
 
-    # إعداد القائمة الجانبية الأنيقة لإدارة الغرف وحالة الحساب
+    # شريط التحكم الجانبي
     st.sidebar.markdown(f"### 👤 الحساب: {st.session_state.username}")
     if st.session_state.username != "admin":
         st.sidebar.markdown(f"⏳ الأيام التجريبية المتبقية: **{st.session_state.days_left}** يوم")
@@ -228,3 +217,12 @@ else:
     
     with st.sidebar.form("add_room_form", clear_on_submit=True):
         r_title = st.text_input("🆕 اسم الغرفة الجديدة:").strip()
+        submit_room = st.form_submit_button("➕ إنشاء الغرفة الآن", use_container_width=True)
+        if submit_room and r_title:
+            if r_title not in st.session_state.chat_rooms:
+                st.session_state.chat_rooms[r_title] = []
+                st.session_state.active_room = r_title
+                st.rerun()
+
+    for room in list(st.session_state.chat_rooms.keys()):
+        if room == st.session_state.active_room:
