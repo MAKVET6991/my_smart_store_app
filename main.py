@@ -3,19 +3,41 @@ import google.generativeai as genai
 import requests
 import stripe
 from datetime import datetime, timezone, timedelta
+from PIL import Image
 
-# 1. إعدادات الصفحة الأساسية النظيفة لضمان عمل الواجهة
+# 1. إعدادات الصفحة الأساسية المتكاملة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
-# إعداد مفاتيح الخدمات الخارجية
+# 2. تصميم احترافي آمن يضمن ثبات ظهور العناصر والنصوص بوضوح تام
+st.markdown("""
+    <style>
+    h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
+    p { text-align: center !important; }
+    .dashboard-box { 
+        background-color: #f8fafc; 
+        padding: 20px; 
+        border-radius: 12px; 
+        border: 2px solid #e2e8f0; 
+        text-align: center; 
+        margin-bottom: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .dashboard-box h3 { color: #64748b !important; font-size: 1.1rem !important; margin: 0 !important; }
+    .dashboard-box h2 { color: #4f46e5 !important; font-size: 2.2rem !important; margin: 10px 0 0 0 !important; }
+    .login-box { background-color: #f1f5f9; padding: 30px; border-radius: 16px; border: 1px solid #cbd5e1; max-width: 500px; margin: 0 auto; }
+    </style>
+""", unsafe_allow_html=True)
+
+# إعداد مفاتيح الخدمات الخارجية ونموذج فلاش المتطور لقراءة الوسائط والصور
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-pro")
+    # استخدام نموذج flash لدعم قراءة النصوص والملفات والصور معاً
+    model = genai.GenerativeModel("gemini-1.5-flash")
 except:
     model = None
 
@@ -41,7 +63,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة متغيرات الجلسة الأساسية (Session State)
+# تهيئة وإعداد متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -51,15 +73,21 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية الثابتة والآمنة (Sidebar) ---
+# --- القائمة الجانبية المستقرة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
     st.sidebar.write(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
     st.sidebar.markdown("---")
     
-    # ميزات تظهر للمستخدم العادي فقط (غرف المحادثة)
     if st.session_state.username != "admin":
+        # 🎙️ إضافة ميزة مدخلات الصوت والمايك في الشريط الجانبي
+        st.sidebar.subheader("🎙️ الأدوات الصوتية")
+        audio_value = st.sidebar.audio_input("قم بتسجيل صوتك لإدخاله للمنصة:")
+        if audio_value:
+            st.sidebar.success("تم التقاط الملف الصوتي بنجاح وجاري تحضيره للتحليل!")
+            
+        st.sidebar.markdown("---")
         st.sidebar.subheader("💬 غرف المحادثة")
         with st.sidebar.form("room_form", clear_on_submit=True):
             r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
@@ -69,7 +97,6 @@ if st.session_state.logged_in:
                 st.session_state.active_room = r_title
                 st.rerun()
 
-        # أزرار التبديل بين الغرف
         for room in list(st.session_state.chat_rooms.keys()):
             if room == st.session_state.active_room:
                 st.sidebar.info(f"🎯 {room}")
@@ -79,7 +106,6 @@ if st.session_state.logged_in:
                     st.rerun()
         st.sidebar.markdown("---")
 
-    # زر تسجيل الخروج الذي تطلبه دائماً ظاهر هنا بوضوح بعد الدخول
     if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
@@ -87,7 +113,7 @@ if st.session_state.logged_in:
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
-# --- الواجهة الرئيسية بالمنتصف (بناء تسلسلي أصلي نظيف وعالي الوضوح) ---
+# --- الواجهة الرئيسية بالمنتصف ---
 if not st.session_state.logged_in:
     st.title("⚡ منصة المحادثة الاحترافية الذكية")
     st.write("الجيل القادم من حلول الذكاء الاصطناعي وإدارة البيانات")
@@ -106,8 +132,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                # معالجة آمنة لفك القائمة المسترجعة من Supabase لضمان دخول حساب malek وبقية المستخدمين العاديين
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -144,7 +169,6 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-# 👑 القسم الأول: واجهة المسؤول عند الدخول بحساب الـ admin
 elif st.session_state.username == "admin":
     st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
     st.write("متابعة إحصاءات المشتركين والتقييمات الحالية للمنصة")
@@ -152,36 +176,29 @@ elif st.session_state.username == "admin":
     all_users_resp = supabase_request("users_subscriptions", "GET")
     total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
     
-    # كروت الإحصاءات باستخدام الميزات الأصلية المضمونة في Streamlit لضمان ظهورها
     col1, col2, col3 = st.columns(3)
     col1.metric(label="👥 إجمالي المستخدمين", value=f"{total_users_count} مستخدمين")
     col2.metric(label="💳 الاشتراكات النشطة", value="الفترة التجريبية")
     col3.metric(label="⭐ تقييم المنصة الحالي", value="4.8 / 5")
         
     st.subheader("📋 جدول المشتركين والاشتراكات الحاليين (Supabase)")
-    if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
-        st.dataframe(all_users_resp, use_container_width=True)
-    else:
-        mock_data = [
-            {"username": "malek", "subscription_status": "trial", "days_left": 7},
-            {"username": "anas", "subscription_status": "trial", "days_left": 5}
-        ]
-        st.dataframe(mock_data, use_container_width=True)
-        
-    st.subheader("💬 تقييمات وملاحظات عملائك")
-    st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
+    data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
+    st.dataframe(data_to_show, use_container_width=True)
 
-# 👤 القسم الثاني: واجهة شات الذكاء الاصطناعي للمستخدم العادي (مثل حساب malek)
 else:
     st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
     
-    # عرض الرسائل القديمة بنظام الفقاعات الأصلي الفاخر من Streamlit
+    # 📁 إضافة صندوق رفع الصور والملفات المتقدم أعلى الشات مباشرة
+    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته وتحليله:", type=["png", "jpg", "jpeg", "txt"])
+    
+    # عرض الرسائل السابقة المباشرة بشكل ثابت
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل إدخال الرسائل والمحادثة (صندوق الأسئلة) يظهر بشكل ثابت ومضمون أسفل الصفحة
-    user_input = st.chat_input("💡 اكتب سؤالك هنا وسيجيبك الذكاء الاصطناعي Gemini فوراً...")
+    # حقل إدخال الرسائل والمحادثة (صندوق الأسئلة الأساسي)
+    user_input = st.chat_input("💡 اكتب سؤالك هنا وسيجيبك الذكاء الاصطناعي الفوري الحقيقي...")
+    
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         with st.chat_message("user"):
@@ -189,15 +206,11 @@ else:
             
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
+                with st.spinner("جاري قراءة الوسائط وتوليد الإجابة الحقيقية..."):
                     try:
-                        response = model.generate_content(user_input)
-                        ai_reply = response.text
-                    except:
-                        ai_reply = "عذراً، حدث خطأ أثناء الاتصال بالخادم الذكي."
-            else:
-                ai_reply = f"أهلاً بك يا {st.session_state.username}! تم استقبال رسالتك بنجاح في غرفة [{st.session_state.active_room}]. يرجى إضافة مفتاح GEMINI_API_KEY للحصول على ردود فورية حية."
-            st.write(ai_reply)
-            
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "assistant", "content": ai_reply})
-        st.rerun()
+                        # في حال رفع المستخدم لصورة ملموسة
+                        if uploaded_file and uploaded_file.type.startswith("image/"):
+                            img = Image.open(uploaded_file)
+                            response = model.generate_content([user_input, img])
+                            ai_reply = response.text
+                        # في حال رفع ملف نصي عادي
