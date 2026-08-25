@@ -59,7 +59,7 @@ if "is_subscribed" not in st.session_state:
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
 
-# تهيئة مخزن الغرف المتعددة والميكروفون
+# تهيئة مخزن الغرف المتعددة والميكروفون بشكل مستقر
 if "chat_rooms" not in st.session_state:
     st.session_state.chat_rooms = {"محادثة افتراضية 1": []}
 if "active_room" not in st.session_state:
@@ -182,7 +182,7 @@ else:
             st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
-            # ميزة الغرف المتعددة المطورة بزر تفعيل مخصص (Multi-Chat Rooms)
+            # ميزة الغرف المتعددة الموزونة بالمسافات القياسية
             st.markdown("### 🗂️ غرف المحادثة الحالية")
             
             with st.form("new_room_form", clear_on_submit=True):
