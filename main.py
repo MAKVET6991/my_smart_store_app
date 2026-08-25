@@ -11,27 +11,30 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مرن وواضح يدعم ظهور كافة النصوص وصناديق الكتابة بوضوح
+# 2. 💡 إجبار المتصفح على الثيم الليلي الفخم لظهور صندوق الشات وكافة الحقول بوضوح خارق
 st.markdown("""
     <style>
-    h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
-    p { text-align: center !important; color: #475569; }
+    /* تثبيت خلفية داكنة فاخرة للمنصة بالكامل تمنع الشاشة البيضاء */
+    .stApp { background-color: #0f172a !important; color: #f1f5f9 !important; font-family: system-ui, sans-serif; }
     
-    /* كروت لوحة التحكم الملونة لضمان البروز التام */
-    .dashboard-box { 
-        background-color: #f8fafc; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border: 2px solid #e2e8f0; 
-        text-align: center; 
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-    .dashboard-box h3 { color: #64748b !important; font-size: 1.1rem !important; margin: 0 !important; }
-    .dashboard-box h2 { color: #4f46e5 !important; font-size: 2.2rem !important; margin: 10px 0 0 0 !important; }
+    /* جعل نصوص العناوين والفقرات بارزة باللون الأبيض والأزرق العصري */
+    h1, h2, h3 { color: #f1f5f9 !important; text-align: center !important; font-weight: 700 !important; }
+    p, span, label, .stMarkdown { color: #cbd5e1 !important; }
     
-    /* صناديق تسجيل الدخول المريحة */
-    .login-box { background-color: #f1f5f9; padding: 30px; border-radius: 16px; border: 1px solid #cbd5e1; max-width: 500px; margin: 0 auto; }
+    /* تنسيق كروت الرسائل لتظهر بأسلوب ChatGPT البارز */
+    .chat-user-box { background-color: #1e1b4b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-right: 5px solid #6366f1; text-align: right; color: #ffffff; }
+    .chat-ai-box { background-color: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-right: 5px solid #10b981; text-align: right; color: #ffffff; }
+    
+    /* صناديق الإحصاءات الفاخرة لوحة المسؤول */
+    .dashboard-card { background-color: #1e293b !important; padding: 25px; border-radius: 14px; border: 1px solid #334155; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .dashboard-card h3 { color: #94a3b8 !important; font-size: 1.1rem !important; }
+    .dashboard-card h2 { color: #38bdf8 !important; font-size: 2.2rem !important; margin-top: 10px !important; }
+    
+    /* تحسين مظهر صناديق الدخول */
+    .login-box { background-color: #1e293b; padding: 30px; border-radius: 16px; border: 1px solid #334155; max-width: 500px; margin: 0 auto; }
+    
+    /* تثبيت لون خط صندوق الكتابة السفلي باللون الأبيض */
+    .stChatInputContainer textarea { color: #ffffff !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -118,10 +121,10 @@ if st.session_state.logged_in:
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
-# --- الواجهة الرئيسية بالمنتصف (بناء تسلسلي مستقر تماماً ضد الاختفاء) ---
+# --- الواجهة الرئيسية بالمنتصف (بناء تسلسلي مستقر ومحمي للألوان) ---
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center; margin-top: 30px;'>⚡ منصة المحادثة الاحترافية الذكية</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>الجيل القادم من حلول الذكاء الاصطناعي وإدارة البيانات</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin-top: 30px;'>⚡ منصة المحادثة الاحترافية الذكية</h1>", unsafe_allow_html=True)
+    st.markdown("<p>الجيل القادم من حلول الذكاء الاصطناعي وإدارة البيانات</p>", unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول لحسابك", "📝 فتح حساب جديد"])
     
@@ -140,9 +143,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                
-                # استخراج الحساب خطياً في سطر واحد تماماً لمنع حدوث أي خطأ إزاحة نهائياً
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -183,28 +184,17 @@ if not st.session_state.logged_in:
                 except Exception as e:
                     st.error(f"حدث خطأ أثناء التهيئة: {e}")
 
-# 👑 أولاً: عرض ميزات حساب الـ admin (لوحة الإدارة والتقارير والجداول المباشرة)
+# 👑 أولاً: عرض ميزات حساب الـ admin (لوحة الإدارة والإحصاءات الملونة)
 elif st.session_state.username == "admin":
-    st.markdown("<h1>📊 لوحة تحكم المسؤول العام (Admin)</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #38bdf8;'>📊 لوحة تحكم المسؤول العام (Admin)</h1>", unsafe_allow_html=True)
     st.markdown("<p>متابعة إحصاءات حية وجداول المشتركين والتقييمات الحالية للمنصة</p>", unsafe_allow_html=True)
     
     all_users_resp = supabase_request("users_subscriptions", "GET")
     total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
     
-    # 🛠️ الحل الجذري التام: إلغاء تقسيم الأعمدة with col وعرض الكروت بشكل متتابع ومحمي لمنع أخطاء الـ Indentation تماماً
-    st.markdown(f'<div class="dashboard-box"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count} مستخدمين</h2></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-box"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-box"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="dashboard-card"><h3>👥 إجمالي المستخدمين</h3><h2>{total_users_count} مستخدمين</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h3>💳 الاشتراكات النشطة</h3><h2>الفترة التجريبية</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h3>⭐ تقييم المنصة</h3><h2>4.8 / 5</h2></div>', unsafe_allow_html=True)
         
     st.subheader("📋 جدول المشتركين الحاليين (Supabase)")
     if isinstance(all_users_resp, list) and len(all_users_resp) > 0:
-        st.dataframe(all_users_resp, use_container_width=True)
-    else:
-        mock_data = [
-            {"username": "malek", "subscription_status": "trial", "days_left": 7},
-            {"username": "anas", "subscription_status": "trial", "days_left": 5}
-        ]
-        st.dataframe(mock_data, use_container_width=True)
-        
-    st.subheader("💬 تقييمات وملاحظات العملاء")
-    st.info("💡 قسم التقييمات جاهز ومعد للاستخدام فور ربطه بجدول الملاحظات الخاص بك بـ Supabase.")
