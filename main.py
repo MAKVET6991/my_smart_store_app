@@ -182,9 +182,11 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
-                # 🛠️ التعديل الجذري الحاسم: استخراج الحساب خطياً في سطر واحد تماماً لمنع حدوث أي خطأ إزاحة نهائياً
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                # معالجة آمنة للحسابات المسترجعة بداخل قائمة من قاعدة البيانات
+                if isinstance(user_data, list) and len(user_data) > 0:
+                    user_data = user_data[0]
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -206,6 +208,3 @@ if not st.session_state.logged_in:
             res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
             if isinstance(res, list) and len(res) > 0:
                 st.error("❌ اسم المستخدم مسجل مسبقاً!")
-            else:
-                try:
-                    cust_id = ""
