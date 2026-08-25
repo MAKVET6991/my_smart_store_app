@@ -57,8 +57,6 @@ if "is_subscribed" not in st.session_state:
     st.session_state.is_subscribed = False
 if "days_left" not in st.session_state:
     st.session_state.days_left = 0
-
-# تفادي مشكلة الشاشة الفارغة: إنشاء قائمة الرسائل تلقائياً فوراً
 if "current_messages" not in st.session_state:
     st.session_state.current_messages = []
 if "voice_text" not in st.session_state:
@@ -139,14 +137,12 @@ if not st.session_state.logged_in:
 
 # 4. غرف المحادثة والشات المباشر المضمون
 else:
-    if not st.session_state.is_subscribed:
-        st.title("💳 انتهت الفترة التجريبية المجانية")
-        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3></div>", unsafe_allow_html=True)
-        
+    # حماية وحساب الرابط المالي للمشتركين العاديين فقط واستثناء الـ admin من فحص المبيعات
+    payment_link_url = ""
+    if st.session_state.username != "admin" and not st.session_state.is_subscribed:
         try:
             user_data = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{st.session_state.username}"})
             customer_id = user_data["stripe_customer_id"] if user_data else None
-            
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[{'price': st.secrets["STRIPE_PRICE_ID"], 'quantity': 1}],
@@ -155,9 +151,15 @@ else:
                 success_url=st.secrets.get("SUPABASE_URL", "https://stripe.com"),
                 cancel_url="https://stripe.com",
             )
-            st.markdown(f"<br><a href='{session.url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"خطأ في إنشاء رابط الدفع: {e}")
+            payment_link_url = session.url
+        except:
+            pass
+
+    if not st.session_state.is_subscribed and st.session_state.username != "admin":
+        st.title("💳 انتهت الفترة التجريبية المجانية")
+        st.markdown(f"<div class='pay-box'><h3>عذراً يا {st.session_state.username}، لقد انتهت الـ 7 أيام التجريبية لحسابك!</h3></div>", unsafe_allow_html=True)
+        if payment_link_url:
+            st.markdown(f"<br><a href='{payment_link_url}' target='_blank'><button style='width:100%; padding:12px; background-color:#4f46e5; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; font-weight:bold;'>💳 تفعيل الحساب عبر Stripe</button></a>", unsafe_allow_html=True)
     else:
         st.title("💬 غرف المحادثات الاحترافية العالمية")
         
@@ -165,7 +167,7 @@ else:
         model = genai.GenerativeModel('models/gemini-1.5-flash')
 
         with st.sidebar:
-            st.markdown(f"👤 الحساب الحالي: *{st.session_state.username}*")
+            st.markdown(f"👤 الحساب الحالي: **{st.session_state.username}**")
             st.markdown("---")
             
             if st.session_state.username == "admin":
@@ -173,10 +175,9 @@ else:
                 all_users = supabase_request("users_subscriptions", "GET")
                 if all_users:
                     for u in all_users:
-                        st.write(f"• *{u['username']}* ({u['subscription_status']})")
+                        st.write(f"• **{u['username']}** ({u['subscription_status']})")
                 st.markdown("---")
             
-            # ميزة الميكروفون والصوت المضافة بوضوح لراحة الرؤية 🎙️
             st.markdown("### 🎙️ المساعد الصوتي السريع")
             audio_value = st.audio_input("اضغط للتحدث بصوتك:")
             if audio_value is not None:
@@ -186,6 +187,3 @@ else:
             
             st.markdown("### 📂 تحليل الملفات والصور")
             uploaded_file = st.file_uploader("ارفع ملف للتحليل", type=["pdf", "txt", "jpg", "jpeg", "png"])
-            file_context = ""
-            if uploaded_file is not None:
-                st.success("✅ تم تحميل الملف بنجاح!")
