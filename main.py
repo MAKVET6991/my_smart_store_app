@@ -12,7 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مرن مضاد للون الأبيض لبروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -27,7 +26,6 @@ stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 model = None
 gemini_init_error = None
 
-# فحص وتأمين قراءة مفتاح الذكاء الاصطناعي بدقة
 if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
@@ -35,7 +33,7 @@ if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != ""
     except Exception as e:
         gemini_init_error = f"فشلت تهيئة مكتبة Google AI: {str(e)}"
 else:
-    gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets في Streamlit Cloud."
+    gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets."
 
 # دالة الاستدعاء المضمونة من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -59,7 +57,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
+# تهيئة وإعداد متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -69,12 +67,11 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# دالة تفويض الخروج الفوري والآمن من الجذور
 def logout_callback():
     st.session_state.logged_in = False
     st.session_state.username = ""
 
-# --- القائمة الجانبية المستقرة والكاملة لجميع ميزات المنصة (Sidebar) ---
+# --- القائمة الجانبية (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -137,14 +134,14 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # استخراج البيانات خطياً لضمان قراءة الحسابات القديمة بنجاح مطلق
-                single_user = None
+                # 🛠️ معالجة وتحويل القائمة (List) القادمة من Supabase لقاموس (Dict) لمنع الـ AttributeError نهائياً وبثبات قطعي
+                user_dict = None
                 if isinstance(res, list) and len(res) > 0:
-                    single_user = res
+                    user_dict = res[0]
                 elif isinstance(res, dict):
-                    single_user = res
+                    user_dict = res
                 
-                if single_user and single_user.get("password_hash") == pass_in:
+                if user_dict and user_dict.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.rerun()
@@ -181,7 +178,7 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
-# --- واجهات العرض بعد تسجيل الدخول الموحدة مسطحاً بدون كتل تداخل ---
+# --- واجهات العرض بعد تسجيل الدخول بنجاح ---
 else:
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
@@ -202,7 +199,7 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # 🛠️ استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
+    # استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
@@ -211,3 +208,7 @@ else:
     
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)
+        
+        gemini_inputs = [user_input]
+        if uploaded_file and uploaded_file.type.startswith("image/"):
