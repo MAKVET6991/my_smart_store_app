@@ -368,11 +368,9 @@ def generate_ai_stream(user_message):
 
                 yield chunk.text
 
-    except Exception:
+    except Exception as e:
 
-        yield (
-            "⚠️ حدث خطأ مؤقت أثناء الاتصال "
-            "بالذكاء الاصطناعي. حاول مرة أخرى."
+    yield f"⚠️ خطأ Gemini الحقيقي: {type(e)._name_}: {e}"
         )
 
 
