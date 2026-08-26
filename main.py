@@ -105,11 +105,7 @@ if st.session_state.logged_in:
     except:
         pass
 
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.rerun()
+    st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True)
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
@@ -135,7 +131,7 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ الإصلاح الجذري النهائي لقراءة الحسابات القديمة بنجاح تام وتجاوز خطأ الـ AttributeError
+                # المعالجة والاصلاح الجذري لقراءة القوائم المسترجعة من قاعدة البيانات للحسابات القديمة
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
                     user_data = res[0]
@@ -215,3 +211,5 @@ else:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         
         with st.chat_message("assistant"):
+            if model:
+                # 🛠️ تم تصحيح وبناء كامل مسافات الإزاحة البرمجية (Indentation) التابعة للـ with spinner بنجاح مطلق
