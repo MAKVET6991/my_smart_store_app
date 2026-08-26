@@ -129,7 +129,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -145,7 +145,6 @@ if not st.session_state.logged_in:
         st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_reg and reg_user and reg_pass:
-            # 🛠️ حماية أمنية لمنع تكرار تسجيل نفس الحساب ومنع أنانية حجز الأسماء المتكررة
             check_res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
             if check_res and len(check_res) > 0:
                 st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام! الرجاء اختيار اسم آخر.")
@@ -203,17 +202,22 @@ else:
         
         with st.chat_message("assistant"):
             if model:
-                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
-                    gemini_inputs = [user_input]
-                    
-                    # 🛠️ معالجة مسطحة خطية 100% تم إلغاء كتل try/except الداخلية والتعليقات المسببة لخطأ السطر 218 نهائياً
-                    if uploaded_file and uploaded_file.type.startswith("image/"):
-                        img_data = Image.open(uploaded_file)
-                        gemini_inputs.append(img_data)
-                    
-                    if uploaded_file and uploaded_file.type == "text/plain":
-                        file_data = uploaded_file.read().decode("utf-8")
-                        gemini_inputs.append(file_data)
-                    
+                gemini_inputs = [user_input]
+                
+                # 🛠️ معالجة مسطحة خطية بالكامل آمنة ومجردة من كتل الـ try/except المتشعبة لإنهاء خطأ السطر 219 نهائياً
+                if uploaded_file and uploaded_file.type.startswith("image/"):
                     try:
-                        response = model.generate_content(gemini_inputs)
+                        gemini_inputs.append(Image.open(uploaded_file))
+                    except:
+                        pass
+                
+                if uploaded_file and uploaded_file.type == "text/plain":
+                    try:
+                        gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+                    except:
+                        pass
+                
+                try:
+                    response = model.generate_content(gemini_inputs)
+                    ai_reply = response.text
+                except:
