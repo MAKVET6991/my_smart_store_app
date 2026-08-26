@@ -5,13 +5,14 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي
+# 1. إعدادات الصفحة الأساسية لضمان ثبات الواجهة واختفاء التعليق
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
+# 2. تصميم احترافي آمن لبروز العناصر وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -23,6 +24,16 @@ st.markdown("""
 
 # إعداد مفاتيح الخدمات
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
+
+# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر من الجذور
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
+    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
+if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
+    st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
 # دالة الاستدعاء المضمونة من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -46,42 +57,24 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
-    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
-if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
-    st.session_state.active_room = "المحادثة الرئيسية 🌟"
-
-def logout_callback():
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-
-# --- القائمة الجانبية (Sidebar) ---
+# --- القائمة الجانبية المستقرة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
-# حقل يدوي مباشر لوضع مفتاح الـ API لكسر كاش السيرفر الميت نهائياً وجلب الرد
+# حقل يدوي مباشر لوضع مفتاح الـ API لكسر كاش السيرفر وجلب الرد
 st.sidebar.subheader("🔑 تفعيل اتصال الذكاء الاصطناعي")
-user_gemini_key = st.sidebar.text_input("ضع مفتاح Gemini الجديد هنا لربطه فوراً:", type="password", help="انسخ المفتاح الذي يبدأ بـ AIzaSy وضعه هنا مباشرة لكسر كاش السيرفر").strip()
+user_gemini_key = st.sidebar.text_input("ضع مفتاح Gemini الجديد هنا لربطه فوراً:", type="password", key="manual_gemini_key").strip()
 
-# تهيئة النموذج بناء على المفتاح المكتوب باليد فورا
+# تهيئة دقيقة للنموذج بناءً على المفتاح المكتوب باليد أو من السيرفر
 model = None
-if user_gemini_key != "":
+active_key = user_gemini_key if user_gemini_key != "" else st.secrets.get("GEMINI_API_KEY", "").strip()
+
+if active_key != "":
     try:
-        genai.configure(api_key=user_gemini_key)
+        genai.configure(api_key=active_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
     except:
-        model = None
-else:
-    # محاولة قراءة المفتاح من السيرفر كخيار احتياطي ثانٍ
-    server_key = st.secrets.get("GEMINI_API_KEY", "").strip()
-    if server_key != "":
         try:
-            genai.configure(api_key=server_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-pro")
         except:
             model = None
 
@@ -90,13 +83,11 @@ if st.session_state.logged_in:
     st.sidebar.write(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
     
     st.sidebar.subheader("💬 غرف المحادثة")
-    with st.sidebar.form("room_form", clear_on_submit=True):
-        r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
-        add_btn = st.form_submit_button("➕ إنشاء الغرفة", use_container_width=True)
-        if add_btn and r_title and r_title not in st.session_state.chat_rooms:
+    r_title = st.sidebar.text_input("📝 اسم الغرفة الجديدة:", key="create_room_input").strip()
+    if st.sidebar.button("➕ إنشاء الغرفة", use_container_width=True):
+        if r_title and r_title not in st.session_state.chat_rooms:
             st.session_state.chat_rooms[r_title] = []
             st.session_state.active_room = r_title
-            st.rerun()
 
     for room in list(st.session_state.chat_rooms.keys()):
         if room == st.session_state.active_room:
@@ -104,18 +95,11 @@ if st.session_state.logged_in:
         else:
             if st.sidebar.button(f"📄 {room}", key=f"side_{room}", use_container_width=True):
                 st.session_state.active_room = room
-                st.rerun()
                 
     st.sidebar.markdown("---")
-    try:
-        audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
-        if audio_value:
-            st.sidebar.success("🎤 تم التقاط الصوت بنجاح!")
-    except:
-        pass
-
-    st.sidebar.markdown("---")
-    st.sidebar.button("🚪 تسجيل الخروج من الحساب", on_click=logout_callback, use_container_width=True, type="secondary")
+    if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True, key="logout_btn"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
@@ -137,22 +121,17 @@ if not st.session_state.logged_in:
             if user_in == "admin" and pass_in == "admin123":
                 st.session_state.logged_in = True
                 st.session_state.username = "admin"
-                st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                
-                # فك القائمة المسترجعة بدقة لمنع خطأ الـ AttributeError لجميع المستخدمين
                 user_dict = None
-                if isinstance(res, list):
-                    if len(res) > 0:
-                        user_dict = res[0]
+                if isinstance(res, list) and len(res) > 0:
+                    user_dict = res[0]
                 elif isinstance(res, dict):
                     user_dict = res
                 
                 if user_dict and user_dict.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
-                    st.rerun()
                 else:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
                     
@@ -166,7 +145,7 @@ if not st.session_state.logged_in:
         if btn_reg and reg_user and reg_pass:
             check_res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
             if check_res and len(check_res) > 0:
-                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام! الرجاء اختيار اسم آخر.")
+                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام!")
             else:
                 cust_id = ""
                 if stripe.api_key:
@@ -191,7 +170,7 @@ else:
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
         all_users_resp = supabase_request("users_subscriptions", "GET")
-        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 4
+        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 5
         
         col1, col2, col3 = st.columns(3)
         col1.metric(label="👥 إجمالي المستخدمين المسجلين", value=f"{total_users_count} مستخدمين")
@@ -207,12 +186,26 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
+    # عرض تاريخ الرسائل بثبات كامل من ذاكرة الغرفة النشطة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال الأصلي للرسائل
+    # حقل الإدخال الخطي المباشر
     user_input = st.chat_input("💡 اكتب سؤالك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)
+        
+        gemini_inputs = [user_input]
+        if uploaded_file and uploaded_file.type.startswith("image/"):
+            try: gemini_inputs.append(Image.open(uploaded_file))
+            except: pass
+            
+        ai_reply = ""
+        if model:
+            with st.spinner("جاري جلب الإجابة من خوادم جوجل..."):
+                try:
+                    response = model.generate_content(gemini_inputs)
+                    ai_reply = response.text
+                except Exception as api_err:
