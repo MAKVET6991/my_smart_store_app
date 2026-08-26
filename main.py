@@ -134,7 +134,13 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                
+                # 🛠️ الإصلاح الجذري النهائي لقراءة الحسابات القديمة بنجاح تام وتجاوز خطأ الـ AttributeError
+                user_data = None
+                if isinstance(res, list) and len(res) > 0:
+                    user_data = res[0]
+                elif isinstance(res, dict):
+                    user_data = res
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -200,7 +206,7 @@ else:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل الإدخال الأصلي الثابت
+    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
     
     if user_input:
@@ -209,7 +215,3 @@ else:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         
         with st.chat_message("assistant"):
-            if model:
-                # 🛠️ تم تصحيح حرف الـ st.spinner الصغير هنا بدقة ليعمل السيرفر بنجاح فوري
-                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
-                    gemini_inputs = [user_input]
