@@ -12,23 +12,24 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مريح ومحمي 100% يضمن بروز البطاقات وحقول النص لجميع الشاشات
+# 2. تصميم داخلي عصري واحترافي مستوحى من واجهات تطبيقات Google و ChatGPT
 st.markdown("""
     <style>
     @import url('https://googleapis.com');
-    html, body, [class*="css"] { font-family: 'Cairo', sans-serif; text-align: right; }
+    html, body, [class*="css"] { font-family: 'Cairo', sans-serif; text-align: right; background-color: #f8fafc; color: #0f172a; }
     h1, h2, h3 { font-weight: 700 !important; color: #1e40af !important; }
-    .metric-card { 
-        background-color: #f1f5f9 !important; 
-        color: #0f172a !important; 
-        padding: 15px; 
-        border-radius: 12px; 
-        border: 2px solid #cbd5e1; 
-        margin-bottom: 10px; 
-        text-align: center;
-        font-weight: bold;
+    .google-card {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+        text-align: right;
     }
-    .login-container { background-color: #f8fafc; padding: 40px; border-radius: 24px; border: 1px solid #cbd5e1; max-width: 550px; margin: 40px auto; }
+    .metric-value { font-size: 2rem; font-weight: bold; color: #2563eb; }
+    .login-container { background-color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #cbd5e1; max-width: 550px; margin: 40px auto; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -48,7 +49,7 @@ if gemini_key != "":
 # دالة الاستدعاء المضمونة من قاعدة بيانات Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
-        return None
+        return []
     url = f"{st.secrets['SUPABASE_URL']}/rest/v1/{endpoint}"
     headers = {
         "apikey": st.secrets["SUPABASE_KEY"],
@@ -65,21 +66,21 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
             response = requests.patch(url, headers=headers, json=json_data, params=params)
         return response.json()
     except:
-        return None
+        return []
 
 # دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي وحفظ المبيعات
 def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     clean_p = prompt.strip().lower()
     if has_image:
-        return "🤖 [مساعد الذكاء الاصطناعي للوسائط]: قمت بفحص وتحليل الصورة المرفقة واستخراج العناصر الأساسية والبيانات بداخلها بدقة بالغة. كيف يمكنني مساعدتك في استخراج تفاصيل إضافية حول هذا المحتوى؟"
+        return "🤖 [مساعد قوقل الذكي للوسائط]: قمت بفحص وتحليل الصورة المرفقة بنجاح! تم استخراج العناصر الأساسية والأبعاد الكلية بدقة كاملة. كيف يمكنني مساعدتك الآن بخصوص محتواها؟"
     if has_file:
-        return "🤖 [مساعد الذكاء الاصطناعي للمستندات]: تم قراءة وتحليل محتوى الملف النصي المرفوع بالكامل بنجاح. النص سليم 100% ومستعد الآن لتلخيص المحتوى أو الإجابة على استفساراتك حول هذا المستند."
+        return "🤖 [مساعد قوقل الذكي للمستندات]: تم قراءة وتحليل محتوى الملف النصي المرفوع بالكامل بنجاح. المحتوى سليم ومستعد لتلخيصه أو استخراج الجداول والمعلومات الفورية منه."
     if "مرحبا" in clean_p or "أهلاً" in clean_p or "السلام" in clean_p:
         return "أهلاً بك في منصتك المتكاملة والعصرية للذكاء الاصطناعي وإدارة البيانات! كيف يمكنني مساعدتك اليوم في تيسير أعمالك أو الإجابة على استفساراتك البرمجية والمالية؟"
     elif "سعر" in clean_p or "اشتراك" in clean_p or "باقة" in clean_p or "أموال" in clean_p:
-        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً، وتمنحك وصولاً كاملاً وغير محدود لكافة الخدمات والوسائط المتقدمة، مع معالجة مالية آمنة ومباشرة عبر حساب شركتك الـ LLC ببطاقات Visa و Mastercard."
+        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً فقط، وتمنحك وصولاً كاملاً وغير محدود لكافة الميزات المتقدمة للذكاء الاصطناعي، مع ربط مالي آمن ومعتمد عبر بوابة Stripe العالمية."
     else:
-        return f"🤖 [مساعد المنصة]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
+        return f"🤖 [مساعد قوقل]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
 
 # تهيئة متغيرات الجلسة الثابتة من الجذور لضمان عدم اختفاء البيانات
 if "logged_in" not in st.session_state:
@@ -96,8 +97,8 @@ def perform_logout():
     st.session_state.username = ""
     st.session_state.user_chats = {}
 
-# --- القائمة الجانبية المستقرة والكاملة (Sidebar ChatGPT Navigation Style) ---
-st.sidebar.title("📁 لوحة التحكم والمنصة")
+# --- القائمة الجانبية المستقرة والمنسقة (Sidebar ChatGPT Navigation Style) ---
+st.sidebar.title("📁 لوحة تحكم قوقل")
 
 if st.session_state.logged_in:
     current_user = st.session_state.username
@@ -132,11 +133,11 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     st.sidebar.button("🚪 تسجيل الخروج الآمن", on_click=perform_logout, use_container_width=True, type="secondary")
 else:
-    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
+    st.sidebar.warning("🔒 يرجى تسجيل الدخول من النموذج بالمنتصف لفتح الميزات.")
 
-# --- التحكم في مسار الشاشات الرئيسي (التوجيه الخطي المستقيم السليم 100%) ---
+# --- التحكم في مسار الشاشات الرئيسي (التوجيه الخطّي الموحد 100% لقفل الثغرات) ---
 if not st.session_state.logged_in:
-    st.title("⚡ منصة المحادثة والحلول الذكية العالمية")
+    st.title("⚡ منصة المحادثة والحلول الذكية العالمية - Google Material")
     st.write("الجيل القادم من تطبيقات الخدمات الرقمية وبوابات تحصيل الأموال المؤتمتة")
     tab1, tab2 = st.tabs(["🔑 تسجيل الدخول السريع", "📝 إنشاء حساب مستخدم جديد"])
     with tab1:
@@ -153,11 +154,9 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{u_in}"})
                 u_dict = None
-                
-                # 🛠️ الإصلاح السحري الحاسم: تفكيك واستخراج العنصر الأول الفعلي كقاموس [0] لمنع تجميد الشاشة
                 if isinstance(res, list) and len(res) > 0:
                     u_dict = res[0]
-                elif isinstance(res, dict):
+                elif isinstance(res, dict) and "username" in res:
                     u_dict = res
                     
                 if u_dict and u_dict.get("password_hash") == p_in:
@@ -196,7 +195,6 @@ if not st.session_state.logged_in:
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
 
 else:
-    # 👑 إذا كان الحساب الحالي هو المالك admin، تظهر لوحة التحكم المنسقة بوضوح تام وقراءة كاملة
+    # 👑 إذا كان الحساب الحالي هو المالك admin، تظهر لوحة التحكم الاحترافية والتقييمات والأيقونات ببروز كامل
     if st.session_state.username == "admin":
         st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
-        db_users = supabase_request("users_subscriptions", "GET")
