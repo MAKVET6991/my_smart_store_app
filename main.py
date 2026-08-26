@@ -12,11 +12,15 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم عصري واحترافي يضمن بروز الأيقونات وصناديق الكتابة
+# 2. تصميم مرن مضاد للون الأبيض يضمن بروز حقل المحادثة والأزرار تحت أي ثيم للمتصفح
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
     p { text-align: center !important; color: #475569; }
+    
+    /* صناديق كروت الرسائل البارزة */
+    .msg-user-box { background-color: #e0e7ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #4f46e5; color: #1e1b4b; }
+    .msg-ai-box { background-color: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #10b981; color: #0f172a; }
     
     /* كروت لوحة التحكم الملونة لضمان البروز التام للادمن */
     .dashboard-box { 
@@ -89,8 +93,6 @@ if st.session_state.logged_in:
         st.sidebar.info("⏳ الفترة التجريبية: نشطة")
     
     st.sidebar.markdown("---")
-    
-    # ميزة غرف المحادثة تظهر دائماً بعد تسجيل الدخول بشكل صحيح ومحمي خطياً
     st.sidebar.subheader("💬 غرف المحادثة")
     with st.sidebar.form("room_form", clear_on_submit=True):
         r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
@@ -100,7 +102,6 @@ if st.session_state.logged_in:
             st.session_state.active_room = r_title
             st.rerun()
 
-    # التبديل بين الغرف المتوفرة والنشطة بوضوح تام
     for room in list(st.session_state.chat_rooms.keys()):
         if room == st.session_state.active_room:
             st.sidebar.info(f"🎯 {room}")
@@ -110,9 +111,6 @@ if st.session_state.logged_in:
                 st.rerun()
                 
     st.sidebar.markdown("---")
-    
-    # أداة المايكروفون الصوتي الآمنة
-    st.sidebar.subheader("🎙️ الأدوات الصوتية (اختياري)")
     try:
         audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
         if audio_value:
@@ -121,7 +119,7 @@ if st.session_state.logged_in:
         pass
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True, type="secondary"):
+    if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
@@ -150,9 +148,6 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
-                if isinstance(user_data, list) and len(user_data) > 0:
-                    user_data = user_data[0]
-                
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -168,7 +163,6 @@ if not st.session_state.logged_in:
         st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_reg and reg_user and reg_pass:
-            # حماية أمنية لمنع تكرار تسجيل الحسابات وحظر حجز الأسماء المتكررة من المستخدمين
             check_res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
             if check_res and len(check_res) > 0:
                 st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام! الرجاء اختيار اسم آخر.")
@@ -191,31 +185,30 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
-# --- معالجة شاشات العرض المكتملة بعد تسجيل الدخول بنجاح ---
+# --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً لمنع اختفاء أي عنصر في الثيم الفاتح ---
 else:
-    uploaded_file = None
-    user_input = None
-    
-    # 👑 حساب الـ Admin: لوحة الإدارة وشات المسؤول المدمج بالكامل بتبويبات تفاعلية علوية
+    # 👑 أولاً: إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نعرض له جدول البيانات في الأعلى كرت مستقل
     if st.session_state.username == "admin":
-        admin_tab1, admin_tab2 = st.tabs(["📊 لوحة الإدارة والإحصاءات", "💬 صفحة الدردشة والمحادثة للادمن"])
+        st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
+        all_users_resp = supabase_request("users_subscriptions", "GET")
+        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
         
-        with admin_tab1:
-            st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
-            all_users_resp = supabase_request("users_subscriptions", "GET")
-            total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
+        # كروت الأرقام والإحصاءات المباشرة
+        col1, col2, col3 = st.columns(3)
+        col1.metric(label="👥 إجمالي المستخدمين المسجلين", value=f"{total_users_count} مستخدمين")
+        col2.metric(label="💳 بوابات الدفع الفعالة", value="Stripe LIVE")
+        col3.metric(label="⭐ تقييم الأداء العام", value="4.8 / 5")
             
-            col1, col2, col3 = st.columns(3)
-            col1.metric(label="👥 إجمالي المستخدمين", value=f"{total_users_count} مستخدمين")
-            col2.metric(label="💳 الاشتراكات النشطة", value="الفترة التجريبية")
-            col3.metric(label="⭐ تقييم المنصة الحالي", value="4.8 / 5")
-                
-            st.subheader("📋 جدول المشتركين والاشتراكات الحاليين (Supabase)")
-            data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
-            st.dataframe(data_to_show, use_container_width=True)
-            
-            st.subheader("💬 تقييمات وملاحظات عملائك")
-            st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
-            
-        with admin_tab2:
-            st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
+        st.subheader("📋 جدول المشتركين النشطين بـ Supabase")
+        data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
+        st.dataframe(data_to_show, use_container_width=True)
+        st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
+
+    # 💬 ثانياً: واجهة شات المحادثة الذكية الموحدة والظاهرة للجميع (Admin + المستخدمين)
+    st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
+    
+    # حقل رفع الملفات والصور البارز
+    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
+    
+    # طباعة وعرض فقاعات الرسائل السابقة بوضوح فائق ومقاوم للون الأبيض
+    for msg in st.session_state.chat_rooms[st.session_state.active_room]:
