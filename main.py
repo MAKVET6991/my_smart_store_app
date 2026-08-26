@@ -5,13 +5,14 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي
+# 1. إعدادات الصفحة الأساسية المتكاملة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
+# 2. تصميم احترافي آمن لبروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -134,14 +135,14 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # استخراج البيانات بدقة لمنع الـ AttributeError والتعرف على الحسابات القديمة
-                user_dict = None
+                # 🛠️ المعالجة الاحترافية القاطعة: تحويل واستخراج عناصر القائمة المرجعة من قاعدة البيانات تلقائياً لمنع خطأ الـ AttributeError نهائياً للأبد
+                final_user_data = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_dict = res
+                    final_user_data = res[0]
                 elif isinstance(res, dict):
-                    user_dict = res
+                    final_user_data = res
                 
-                if user_dict and user_dict.get("password_hash") == pass_in:
+                if final_user_data and final_user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.rerun()
@@ -209,7 +210,3 @@ else:
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
-        
-        gemini_inputs = [user_input]
-        
-        # 🛠️ معالجة خطية مسطحة معزولة تماماً بدون أي جمل شرطية أو كتل try/except معقدة تسبب الخلل البرمجي
