@@ -167,7 +167,7 @@ else:
 # إذا كان النموذج غير متاح لحسابك يمكن تغييره من Secrets
 GEMINI_MODEL = st.secrets.get(
     "GEMINI_MODEL",
-    "gemini-2.5-flash"
+    "gemini-3.6-flash"
 ).strip()
 
 
