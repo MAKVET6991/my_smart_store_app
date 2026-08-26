@@ -6,6 +6,9 @@ import stripe
 from datetime import datetime, timezone, timedelta
 import hashlib
 import secrets
+import tempfile
+import os
+import time
 
 
 # =========================================================
@@ -100,6 +103,14 @@ st.markdown(
         border-radius: 24px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    .feature-card {
+        background: white;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 12px;
     }
 
     </style>
@@ -324,7 +335,7 @@ def delete_chat_history(username):
     if not username:
         return False
 
-    result = supabase_request(
+    supabase_request(
         "chat_messages",
         "DELETE",
         params={
@@ -336,7 +347,24 @@ def delete_chat_history(username):
 
 
 # =========================================================
-# GEMINI STREAMING
+# GEMINI ERROR
+# =========================================================
+
+def gemini_error_message():
+
+    error = st.session_state.get(
+        "gemini_init_error",
+        "Gemini client لم يتم تهيئته."
+    )
+
+    return (
+        "⚠️ تعذر تشغيل Gemini.\n\n"
+        f"`{error}`"
+    )
+
+
+# =========================================================
+# GEMINI TEXT STREAMING
 # =========================================================
 
 def generate_ai_stream(
@@ -346,15 +374,7 @@ def generate_ai_stream(
 
     if client is None:
 
-        error = st.session_state.get(
-            "gemini_init_error",
-            "Gemini client لم يتم تهيئته."
-        )
-
-        yield (
-            f"⚠️ تعذر تشغيل Gemini.\n\n"
-            f"`{error}`"
-        )
+        yield gemini_error_message()
 
         return
 
@@ -362,7 +382,6 @@ def generate_ai_stream(
 
         contents = []
 
-        # إرسال آخر 6 رسائل فقط لتقليل زمن الطلب
         recent_messages = previous_messages[-6:]
 
         for message in recent_messages:
@@ -394,7 +413,6 @@ def generate_ai_stream(
                 )
             )
 
-        # السؤال الحالي
         contents.append(
             types.Content(
                 role="user",
@@ -429,8 +447,16 @@ def generate_ai_stream(
 استخدم تنسيقًا سهل القراءة.
 
 اجعل الإجابات مختصرة ما لم يطلب المستخدم التفصيل.
+
+يمكنك تحليل الصور والملفات والصوت والفيديو التي يرسلها المستخدم.
+
+عند تحليل صورة أو ملف أو فيديو:
+- صف ما تراه بدقة.
+- لا تدّعي رؤية شيء غير موجود.
+- إذا كان الملف غير واضح، أخبر المستخدم.
+- إذا كان السؤال يحتاج معلومات غير موجودة في الملف، وضّح ذلك.
 """,
-                    max_output_tokens=500
+                    max_output_tokens=700
                 )
             )
         )
@@ -440,11 +466,8 @@ def generate_ai_stream(
         for chunk in response_stream:
 
             try:
-
                 text = chunk.text
-
             except Exception:
-
                 text = None
 
             if text:
@@ -465,6 +488,278 @@ def generate_ai_stream(
             "⚠️ حدث خطأ أثناء الاتصال بـ Gemini.\n\n"
             f"**نوع الخطأ:** `{type(e).__name__}`\n\n"
             f"**التفاصيل:** `{e}`"
+        )
+
+
+# =========================================================
+# UPLOAD FILE TO GEMINI
+# =========================================================
+
+def upload_file_to_gemini(uploaded_file):
+
+    if client is None:
+
+        return None, gemini_error_message()
+
+    if uploaded_file is None:
+
+        return None, "لم يتم اختيار ملف."
+
+    temp_path = None
+
+    try:
+
+        suffix = os.path.splitext(
+            uploaded_file.name
+        )[1]
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=suffix
+        ) as temp_file:
+
+            temp_file.write(
+                uploaded_file.getvalue()
+            )
+
+            temp_path = temp_file.name
+
+        gemini_file = client.files.upload(
+            file=temp_path
+        )
+
+        # بعض أنواع الملفات تحتاج وقتًا للمعالجة.
+        # ننتظر حتى تصبح ACTIVE.
+        for _ in range(60):
+
+            try:
+
+                current_file = client.files.get(
+                    name=gemini_file.name
+                )
+
+                state = getattr(
+                    current_file,
+                    "state",
+                    None
+                )
+
+                state_name = getattr(
+                    state,
+                    "name",
+                    ""
+                )
+
+                if not state_name:
+
+                    return current_file, None
+
+                if state_name == "ACTIVE":
+
+                    return current_file, None
+
+                if state_name == "FAILED":
+
+                    return (
+                        None,
+                        "❌ فشل Gemini في معالجة الملف."
+                    )
+
+            except Exception:
+
+                pass
+
+            time.sleep(1)
+
+        return (
+            None,
+            "⏳ الملف يحتاج وقتًا أطول للمعالجة. حاول مرة أخرى."
+        )
+
+    except Exception as e:
+
+        return (
+            None,
+            f"❌ فشل رفع الملف إلى Gemini: {e}"
+        )
+
+    finally:
+
+        if temp_path and os.path.exists(temp_path):
+
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+
+# =========================================================
+# ANALYZE FILE
+# =========================================================
+
+def analyze_uploaded_file(
+    uploaded_file,
+    question
+):
+
+    if client is None:
+
+        return gemini_error_message()
+
+    gemini_file, error = (
+        upload_file_to_gemini(
+            uploaded_file
+        )
+    )
+
+    if error:
+
+        return error
+
+    if gemini_file is None:
+
+        return "❌ تعذر تجهيز الملف."
+
+    if not question.strip():
+
+        question = (
+            "حلل هذا الملف بالتفصيل، "
+            "واشرح أهم المعلومات الموجودة فيه."
+        )
+
+    try:
+
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                gemini_file,
+                question
+            ],
+            config=types.GenerateContentConfig(
+                system_instruction="""
+أنت Smart AI.
+
+حلل الملف الذي أرسله المستخدم.
+
+إذا كان صورة:
+حلل محتويات الصورة بالتفصيل.
+
+إذا كان PDF أو مستندًا:
+استخرج المعلومات المهمة وأجب عن سؤال المستخدم اعتمادًا على الملف.
+
+إذا كان جدولًا:
+حلل البيانات والأرقام والعلاقات المهمة.
+
+إذا كان فيديو:
+حلل محتواه، الأحداث، الكلام أو المعلومات الظاهرة فيه حسب السؤال.
+
+إذا كان صوتًا:
+افهم الكلام المسجل وأجب عن السؤال.
+
+لا تخترع معلومات غير موجودة في الملف.
+""",
+                max_output_tokens=1200
+            )
+        )
+
+        text = getattr(
+            response,
+            "text",
+            None
+        )
+
+        if text:
+
+            return text
+
+        return (
+            "⚠️ لم يتم الحصول على نتيجة من Gemini."
+        )
+
+    except Exception as e:
+
+        return (
+            "⚠️ حدث خطأ أثناء تحليل الملف.\n\n"
+            f"`{type(e).__name__}: {e}`"
+        )
+
+
+# =========================================================
+# ANALYZE AUDIO
+# =========================================================
+
+def analyze_audio(
+    audio_file,
+    question
+):
+
+    if client is None:
+
+        return gemini_error_message()
+
+    gemini_file, error = (
+        upload_file_to_gemini(
+            audio_file
+        )
+    )
+
+    if error:
+
+        return error
+
+    if not question.strip():
+
+        question = (
+            "استمع إلى هذا التسجيل، "
+            "حوّل محتواه إلى نص مفهوم، "
+            "ثم لخّص أهم ما قيل."
+        )
+
+    try:
+
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                gemini_file,
+                question
+            ],
+            config=types.GenerateContentConfig(
+                system_instruction="""
+أنت مساعد صوتي ذكي.
+
+استمع إلى التسجيل الصوتي.
+
+افهم الكلام المنطوق حتى لو كان باللغة العربية.
+
+إذا كان التسجيل يحتوي على سؤال، أجب عنه.
+
+إذا طلب المستخدم تفريغ التسجيل، اكتب الكلام المنطوق بوضوح.
+
+لا تخترع كلامًا غير موجود في التسجيل.
+""",
+                max_output_tokens=1200
+            )
+        )
+
+        text = getattr(
+            response,
+            "text",
+            None
+        )
+
+        if text:
+
+            return text
+
+        return (
+            "⚠️ لم يتم الحصول على نتيجة من التسجيل."
+        )
+
+    except Exception as e:
+
+        return (
+            "⚠️ حدث خطأ أثناء تحليل التسجيل.\n\n"
+            f"`{type(e).__name__}: {e}`"
         )
 
 
@@ -589,7 +884,6 @@ def login_user(
 
     authenticated = False
 
-    # الحسابات الجديدة
     if ":" in stored_password:
 
         authenticated = verify_password(
@@ -597,7 +891,6 @@ def login_user(
             stored_password
         )
 
-    # الحسابات القديمة
     else:
 
         authenticated = secrets.compare_digest(
@@ -605,7 +898,6 @@ def login_user(
             stored_password
         )
 
-        # ترقية كلمة المرور القديمة
         if authenticated:
 
             supabase_request(
@@ -647,7 +939,6 @@ def logout():
 
     st.session_state.username = ""
 
-    # لا نحذف المحادثات من Supabase
     st.session_state.messages = []
 
     st.session_state.page = "chat"
@@ -780,7 +1071,6 @@ if not st.session_state.logged_in:
             use_container_width=True
         ):
 
-            # ADMIN
             if (
                 username == "admin"
                 and ADMIN_PASSWORD
@@ -800,7 +1090,6 @@ if not st.session_state.logged_in:
 
                 st.rerun()
 
-            # USER
             elif login_user(
                 username,
                 password
@@ -1062,6 +1351,10 @@ if st.session_state.page == "subscription":
             <li>🤖 ذكاء اصطناعي متقدم</li>
             <li>⚡ ردود سريعة Streaming</li>
             <li>🧠 ذاكرة وحفظ المحادثات</li>
+            <li>📷 تحليل الصور</li>
+            <li>📄 تحليل الملفات</li>
+            <li>🎥 تحليل الفيديو</li>
+            <li>🎙️ تحليل الصوت</li>
             <li>👤 حساب شخصي</li>
             <li>💳 اشتراك شهري عبر Stripe</li>
             <li>🆓 تجربة مجانية لمدة 7 أيام</li>
@@ -1102,7 +1395,7 @@ if st.session_state.page == "subscription":
 
 
 # =========================================================
-# CHAT
+# CHAT HEADER
 # =========================================================
 
 st.markdown(
@@ -1112,7 +1405,7 @@ st.markdown(
     <h1>🤖 المساعد الذكي</h1>
 
     <p>
-    اسأل المساعد الذكي واحصل على إجابة سريعة.
+    اسأل Smart AI أو أرسل صورة أو ملفًا أو فيديو أو تسجيلًا صوتيًا.
     </p>
 
     </div>
@@ -1122,8 +1415,252 @@ st.markdown(
 
 
 # =========================================================
-# SHOW HISTORY
+# MEDIA INPUT AREA
 # =========================================================
+
+st.markdown(
+    "### 📎 أدوات Smart AI"
+)
+
+media_tab, audio_tab = st.tabs(
+    [
+        "📎 صورة / ملف / فيديو",
+        "🎙️ تسجيل صوتي"
+    ]
+)
+
+
+# =========================================================
+# FILE / IMAGE / VIDEO
+# =========================================================
+
+with media_tab:
+
+    uploaded_file = st.file_uploader(
+        "📎 اختر صورة أو ملفًا أو فيديو",
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "gif",
+            "pdf",
+            "txt",
+            "csv",
+            "json",
+            "xml",
+            "html",
+            "md",
+            "doc",
+            "docx",
+            "xls",
+            "xlsx",
+            "ppt",
+            "pptx",
+            "mp4",
+            "mpeg",
+            "mov",
+            "avi",
+            "mkv",
+            "webm",
+            "mp3",
+            "wav",
+            "m4a",
+            "flac"
+        ],
+        key="media_uploader",
+        max_upload_size=200
+    )
+
+    if uploaded_file:
+
+        file_type = (
+            uploaded_file.type or ""
+        )
+
+        if file_type.startswith("image/"):
+
+            st.image(
+                uploaded_file,
+                caption=uploaded_file.name,
+                use_container_width=True
+            )
+
+        elif file_type.startswith("video/"):
+
+            st.video(
+                uploaded_file
+            )
+
+        elif file_type.startswith("audio/"):
+
+            st.audio(
+                uploaded_file
+            )
+
+        st.caption(
+            f"📎 {uploaded_file.name} — "
+            f"{uploaded_file.size / 1024 / 1024:.2f} MB"
+        )
+
+        file_question = st.text_area(
+            "❓ ماذا تريد من Smart AI أن يفعل بهذا الملف؟",
+            placeholder=(
+                "مثال: حلل الصورة، "
+                "لخص هذا الملف، "
+                "ماذا يحدث في الفيديو؟"
+            ),
+            key="file_question"
+        )
+
+        if st.button(
+            "🔍 تحليل الملف",
+            type="primary",
+            use_container_width=True
+        ):
+
+            with st.chat_message("user"):
+
+                st.markdown(
+                    f"📎 **الملف:** {uploaded_file.name}"
+                )
+
+                if file_question.strip():
+
+                    st.markdown(
+                        f"❓ {file_question}"
+                    )
+
+            with st.chat_message("assistant"):
+
+                with st.spinner(
+                    "🔄 جاري رفع الملف وتحليله..."
+                ):
+
+                    result = analyze_uploaded_file(
+                        uploaded_file,
+                        file_question
+                    )
+
+                st.markdown(result)
+
+            save_message(
+                st.session_state.username,
+                "user",
+                f"📎 {uploaded_file.name}\n"
+                f"{file_question}"
+            )
+
+            save_message(
+                st.session_state.username,
+                "assistant",
+                result
+            )
+
+            st.session_state.messages.append(
+                {
+                    "role": "user",
+                    "content":
+                        f"📎 {uploaded_file.name}\n"
+                        f"{file_question}"
+                }
+            )
+
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": result
+                }
+            )
+
+
+# =========================================================
+# AUDIO INPUT
+# =========================================================
+
+with audio_tab:
+
+    audio_value = st.audio_input(
+        "🎙️ اضغط وسجّل سؤالك",
+        sample_rate=16000,
+        key="voice_input"
+    )
+
+    if audio_value:
+
+        st.audio(
+            audio_value
+        )
+
+        audio_question = st.text_input(
+            "📝 تعليمات اختيارية للتسجيل",
+            placeholder=(
+                "مثال: أجب عن السؤال الموجود في التسجيل"
+            ),
+            key="audio_question"
+        )
+
+        if st.button(
+            "🎧 تحليل التسجيل",
+            type="primary",
+            use_container_width=True
+        ):
+
+            with st.chat_message("user"):
+
+                st.markdown(
+                    "🎙️ **سؤال صوتي**"
+                )
+
+            with st.chat_message("assistant"):
+
+                with st.spinner(
+                    "🔄 جاري تحليل التسجيل..."
+                ):
+
+                    result = analyze_audio(
+                        audio_value,
+                        audio_question
+                    )
+
+                st.markdown(result)
+
+            save_message(
+                st.session_state.username,
+                "user",
+                "🎙️ سؤال صوتي"
+            )
+
+            save_message(
+                st.session_state.username,
+                "assistant",
+                result
+            )
+
+            st.session_state.messages.append(
+                {
+                    "role": "user",
+                    "content": "🎙️ سؤال صوتي"
+                }
+            )
+
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": result
+                }
+            )
+
+
+# =========================================================
+# SHOW CHAT HISTORY
+# =========================================================
+
+st.divider()
+
+st.markdown(
+    "### 💬 المحادثة"
+)
 
 for message in st.session_state.messages:
 
@@ -1137,7 +1674,7 @@ for message in st.session_state.messages:
 
 
 # =========================================================
-# CHAT INPUT
+# TEXT CHAT INPUT
 # =========================================================
 
 user_input = st.chat_input(
@@ -1147,19 +1684,16 @@ user_input = st.chat_input(
 
 if user_input:
 
-    # نسخة من التاريخ قبل إضافة السؤال الحالي
     previous_messages = list(
         st.session_state.messages
     )
 
-    # عرض السؤال
     with st.chat_message("user"):
 
         st.markdown(
             user_input
         )
 
-    # حفظ السؤال محليًا
     st.session_state.messages.append(
         {
             "role": "user",
@@ -1167,14 +1701,12 @@ if user_input:
         }
     )
 
-    # حفظ السؤال في Supabase
     save_message(
         st.session_state.username,
         "user",
         user_input
     )
 
-    # توليد الرد
     with st.chat_message("assistant"):
 
         bot_response = st.write_stream(
@@ -1184,7 +1716,6 @@ if user_input:
             )
         )
 
-    # حفظ الرد محليًا
     st.session_state.messages.append(
         {
             "role": "assistant",
@@ -1192,7 +1723,6 @@ if user_input:
         }
     )
 
-    # حفظ الرد في Supabase
     save_message(
         st.session_state.username,
         "assistant",
