@@ -204,4 +204,4 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     try:
         audio_value = st.sidebar.audio_input("🎙️ سجل رسالة صوتية (اختياري):")
-        if audio_value:
+        ifaudio_value:
