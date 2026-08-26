@@ -133,7 +133,7 @@ if not st.session_state.logged_in:
                 
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_data = res
+                    user_data = res[0]
                 elif isinstance(res, dict):
                     user_data = res
                 
@@ -210,7 +210,7 @@ else:
         
         with st.chat_message("assistant"):
             if model:
-                # 🛠️ دمج وتأمين قراءة الصور خطياً 100% بداخل مصفوفة الاستدعاء لإنهاء خطأ الـ Indentation للسطر 216 قطعيًا
+                # 🛠️ معالجة خطية 100% بدون أي كتل أو شروط مسببة لأخطاء المسافات نهائياً ببيئة بايثون
                 gemini_inputs = [user_input]
                 
-                if uploaded_file:
+                # استخدام دوال فحص مباشرة لفرز المرفقات بأمان
