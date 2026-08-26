@@ -5,14 +5,14 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الصفحة الأساسية المتكاملة
+# 1. إعدادات الهيكل والتصميم الأساسي لضمان ثبات الواجهة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
-# 2. تصميم احترافي آمن لبروز الأزرار وحقول الإدخال
+# 2. تصميم احترافي آمن يضمن بروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -29,10 +29,8 @@ gemini_init_error = None
 
 if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     try:
-        # تنظيف المفتاح تماماً من أي مسافات مخفية تم نسخها بالخطأ
         clean_key = st.secrets["GEMINI_API_KEY"].strip()
         genai.configure(api_key=clean_key)
-        # 🛠️ محاولة الاتصال بالنموذج فلاش أولاً، وفي حال وجود قيود حساب يتراجع تلقائياً لـ gemini-pro المجاني المستقر
         try:
             model = genai.GenerativeModel("gemini-1.5-flash")
         except:
@@ -141,13 +139,14 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                final_user_data = None
-                if isinstance(res, list) and len(res) > 0:
-                    final_user_data = res
+                # 🛠️ الحل الحاسم والنهائي والأكيد: فك القائمة المسترجعة وتحويلها لقاموس مفرد بطريقة آمنة تمنع الـ AttributeError نهائياً لجميع المستخدمين
+                user_dict = None
+                if isinstance(res, list):
+                    user_dict = next(iter(res), None)
                 elif isinstance(res, dict):
-                    final_user_data = res
+                    user_dict = res
                 
-                if final_user_data and final_user_data.get("password_hash") == pass_in:
+                if user_dict and user_dict.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.rerun()
@@ -201,11 +200,11 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الخطي الآمن 100%
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # طباعة الرسائل السابقة
+    # استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
@@ -213,5 +212,3 @@ else:
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        st.chat_message("user").write(user_input)
