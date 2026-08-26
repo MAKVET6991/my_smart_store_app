@@ -36,7 +36,6 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 4px 6px rgba(32,33,36,0.1);
         margin-bottom: 25px;
-        animation: pulse 2s infinite;
     }
     .login-container { background-color: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #dadce0; max-width: 500px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     </style>
@@ -140,7 +139,7 @@ if st.session_state.logged_in:
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول من النموذج بالمنتصف لفتح الميزات.")
 
-# --- التحكم في مسار الشاشات الرئيسي (التوجيه الخطي المستقيم الموحد 100% لمنع الشاشة البيضاء) ---
+# --- التحكم في مسار الشاشات الرئيسي الموحد ---
 
 # الحالة الأولى: في حال لم يقم المستخدم بتسجيل الدخول بعد (إجبار ظهور نموذج الدخول بالمنتصف فوراً)
 if not st.session_state.logged_in:
@@ -160,11 +159,14 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{u_in}"})
+                
+                # 🛠️ الإصلاح الجوهري القاطع: استخراج القاموس من القائمة لتفادي خطأ الـ AttributeError نهائياً 100% lجميع الحسابات القديمة
                 u_dict = None
                 if isinstance(res, list) and len(res) > 0:
-                    u_dict = res
+                    u_dict = res[0]
                 elif isinstance(res, dict):
                     u_dict = res
+                    
                 if u_dict and u_dict.get("password_hash") == p_in:
                     st.session_state.logged_in = True
                     st.session_state.username = u_in
@@ -180,7 +182,7 @@ if not st.session_state.logged_in:
         if reg_clicked and r_user and r_pass:
             check = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{r_user}"})
             if check and len(check) > 0:
-                st.error("❌ اسم المستخدم هذا مسجل مسبقاً in النظام!")
+                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام!")
             else:
                 cust_id = ""
                 if stripe.api_key:
@@ -197,4 +199,3 @@ if not st.session_state.logged_in:
                     "stripe_customer_id": cust_id,
                     "trial_end_date": f_trial
                 }
-                supabase_request("users_subscriptions", "POST", json_data=payload)
