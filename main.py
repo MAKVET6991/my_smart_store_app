@@ -212,4 +212,4 @@ else:
         gemini_inputs = [user_input]
         
         if uploaded_file:
-            try:
+        try:
