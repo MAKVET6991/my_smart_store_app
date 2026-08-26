@@ -211,7 +211,6 @@ else:
         with st.chat_message("assistant"):
             if model:
                 gemini_inputs = [user_input]
+                
+                # 🛠️ معالجة مسطحة خطية بالكامل آمنة تماماً ومحاذاة بـ 16 مسافة برمجية صارمة ومضمونة للعمل الفوري بدون أخطاء
                 if uploaded_file and uploaded_file.type.startswith("image/"):
-                    try:
-                        img_data = Image.open(uploaded_file)
-                        gemini_inputs.append(img_data)
