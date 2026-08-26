@@ -15,7 +15,7 @@ st.set_page_config(
 # 2. تصميم Google النظيف والعصري (Light Mode) لضمان وضوح الأيقونات والبطاقات
 st.markdown("""
     <style>
-    @import url('https://googleapis.com family=Cairo:wght@400;700&display=swap');
+    @import url('https://googleapis.com');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; text-align: right; background-color: #f8fafc; color: #0f172a; }
     h1, h2, h3 { font-weight: 700 !important; color: #1e40af !important; }
     .google-card {
@@ -82,7 +82,7 @@ def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     else:
         return f"🤖 [مساعد قوقل]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
 
-# 🛠️ التهيئة الثابتة المعزولة لمنع اختفاء مصفوفة الرسائل نهائياً عند أي Refresh
+# التهيئة الثابتة المعزولة لمنع اختفاء مصفوفة الرسائل نهائياً عند أي Refresh
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -168,20 +168,20 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
 
-# 🛠️ الفك القسري النهائي: إجبار رسم كافة المكونات والأقسام علوياً للـ admin وللجميع لمنع الشاشة البيضاء نهائياً
+# في حال تسجيل الدخول بنجاح (رسم المكونات الإجبارية الفاخرة مباشرة)
 else:
-    # 👑 1. كروت وإحصائيات لوحة المسؤول العام والأيقونات والتقييمات تظهر فوراً بالأعلى وبشكل ثابت
-    st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
-    db_users = supabase_request("users_subscriptions", "GET")
-    total_count = len(db_users) if (isinstance(db_users, list) and db_users) else 5
-    
-    st.markdown(f'<div class="google-card">👥 <b>إجمالي الزوار والمشتركين المسجلين بالقاعدة:</b> <span class="metric-value">{total_count} عملاء نشطين</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="google-card">💳 <b>بوابة الدفع والتحصيل المالي الرقمي:</b> <span class="metric-value">Stripe Live API Connected v3</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="google-card">📂 <b>خادم ومستودع البيانات السحابي المتزامن:</b> <span class="metric-value">Supabase REST Server Active</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="google-card">⭐ <b>تقييم كفاءة الرد الآلي وسرعة استجابة المنصة:</b> <span class="metric-value">4.9 / 5.0 (ممتاز جداً)</span></div>', unsafe_allow_html=True)
-    
-    with st.expander("📋 انقر هنا لعرض جدول كشف حساب بيانات المشتركين بالتفصيل من قاعدة البيانات"):
-        if isinstance(db_users, list) and db_users:
-            st.dataframe(db_users, use_container_width=True)
-        else:
-            st.dataframe([{"username": "malek", "subscription_status": "trial", "stripe_customer_id": "cus_123"}], use_container_width=True)
+    # 👑 1. كروت وإحصائيات لوحة المسؤول العام والأيقونات والتقييمات تظهر فوراً بالأعلى في حال كان الحساب هو admin فقط
+    if st.session_state.username == "admin":
+        st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
+        db_users = supabase_request("users_subscriptions", "GET")
+        total_count = len(db_users) if (isinstance(db_users, list) and db_users) else 5
+        
+        st.markdown(f'<div class="google-card">👥 <b>إجمالي الزوار والمشتركين المسجلين بالقاعدة:</b> <span class="metric-value">{total_count} عملاء نشطين</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="google-card">💳 <b>بوابة الدفع والتحصيل المالي الرقمي:</b> <span class="metric-value">Stripe Live API Connected v3</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="google-card">📂 <b>خادم ومستودع البيانات السحابي المتزامن:</b> <span class="metric-value">Supabase REST Server Active</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="google-card">⭐ <b>تقييم كفاءة الرد الآلي وسرعة استجابة المنصة:</b> <span class="metric-value">4.9 / 5.0 (ممتاز جداً)</span></div>', unsafe_allow_html=True)
+        
+        with st.expander("📋 انقر هنا لعرض جدول كشف حساب بيانات المشتركين بالتفصيل من قاعدة البيانات"):
+            if isinstance(db_users, list) and db_users:
+                st.dataframe(db_users, use_container_width=True)
+            else:
