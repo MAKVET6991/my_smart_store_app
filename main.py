@@ -139,10 +139,11 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ الحل الحاسم والنهائي والأكيد: فك القائمة المسترجعة وتحويلها لقاموس مفرد بطريقة آمنة تمنع الـ AttributeError نهائياً لجميع المستخدمين
+                # فك القائمة المسترجعة بدقة لمنع خطأ الـ AttributeError نهائياً لجميع المستخدمين
                 user_dict = None
                 if isinstance(res, list):
-                    user_dict = next(iter(res), None)
+                    if len(res) > 0:
+                        user_dict = res[0]
                 elif isinstance(res, dict):
                     user_dict = res
                 
@@ -204,11 +205,15 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
+    # عرض الرسائل المخزنة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال الأصلي للردود السريعة الفورية
-    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
+    # حقل الإدخال لرسائل المحادثة
+    user_input = st.chat_input("💡 اكتب سؤالك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
+        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)
+        
+        gemini_inputs = [user_input]
