@@ -149,8 +149,8 @@ GEMINI_MODEL = "gemini-3.6-flash"
 # Fallback models if temporary 503 occurs
 GEMINI_FALLBACK_MODELS = [
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite"
+    "gemini-3.6-flash",
+    "gemini-3.6-flash-lite"
 ]
 
 
