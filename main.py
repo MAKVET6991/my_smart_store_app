@@ -134,7 +134,7 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ معالجة وتحويل القائمة (List) القادمة من Supabase لقاموس (Dict) لمنع الـ AttributeError نهائياً وبثبات قطعي
+                # استخراج البيانات بدقة وحماية الحسابات القديمة من مشاكل القوائم
                 user_dict = None
                 if isinstance(res, list) and len(res) > 0:
                     user_dict = res[0]
@@ -211,4 +211,6 @@ else:
         st.chat_message("user").write(user_input)
         
         gemini_inputs = [user_input]
-        if uploaded_file and uploaded_file.type.startswith("image/"):
+        
+        # 🛠️ معالجة حذرة ومحاذية بدقة لأسطر قراءة الملفات لتجنب كسر الـ Indentation نهائياً وبشكل قطعي
+        if uploaded_file:
