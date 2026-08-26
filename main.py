@@ -69,6 +69,11 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
+# 🛠️ دالة تفويض الخروج الفوري والآمن لإجبار المتصفح على قفل الحساب فوراً
+def logout_callback():
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+
 # --- القائمة الجانبية المستقرة والكاملة لجميع ميزات المنصة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
@@ -105,7 +110,9 @@ if st.session_state.logged_in:
     except:
         pass
 
-    st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True)
+    st.sidebar.markdown("---")
+    # 🛠️ ربط دالة الخروج المباشر بالزر لحل المشكلة نهائياً
+    st.sidebar.button("🚪 تسجيل الخروج من الحساب", on_click=logout_callback, use_container_width=True, type="secondary")
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
@@ -133,7 +140,7 @@ if not st.session_state.logged_in:
                 
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_data = res[0]
+                    user_data = res
                 elif isinstance(res, dict):
                     user_data = res
                 
@@ -179,7 +186,7 @@ else:
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
         all_users_resp = supabase_request("users_subscriptions", "GET")
-        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
+        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 4
         
         col1, col2, col3 = st.columns(3)
         col1.metric(label="👥 إجمالي المستخدمين المسجلين", value=f"{total_users_count} مستخدمين")
@@ -207,10 +214,3 @@ else:
         with st.chat_message("user"):
             st.write(user_input)
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        
-        with st.chat_message("assistant"):
-            if model:
-                # 🛠️ معالجة خطية 100% بدون أي كتل أو شروط مسببة لأخطاء المسافات نهائياً ببيئة بايثون
-                gemini_inputs = [user_input]
-                
-                # استخدام دوال فحص مباشرة لفرز المرفقات بأمان
