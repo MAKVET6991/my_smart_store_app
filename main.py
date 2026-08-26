@@ -5,29 +5,39 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل الأساسي وتثبيت واجهة المتصفح لمنع التعليق
+# 1. إعدادات الصفحة وتثبيت المتصفح
 st.set_page_config(
     page_title="المنصة الذكية المتكاملة لحلول الذكاء الاصطناعي", 
     page_icon="👑", 
     layout="wide"
 )
 
-# 2. تصميم داخلي عصري واحترافي مستوحى من واجهات ChatGPT و Dashboards العالمية
+# 2. تصميم داخلي عصري متوافق تماماً مع جميع الألوان والخلفيات
 st.markdown("""
     <style>
     @import url('https://googleapis.com');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; text-align: right; }
     h1, h2, h3 { font-weight: 700 !important; color: #4f46e5 !important; }
-    .metric-container { background-color: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; text-align: center; }
+    .admin-card {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        padding: 15px;
+        border-radius: 12px;
+        border: 2px solid #4f46e5;
+        margin-bottom: 12px;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
     .login-container { background-color: #f8fafc; padding: 40px; border-radius: 24px; border: 1px solid #cbd5e1; max-width: 550px; margin: 40px auto; }
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفاتيح خدمات الدفع والقاعدة السحابية
+# إعداد مفاتيح الخدمات
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 model = None
 
-# فحص وتأمين ربط مفتاح الذكاء الاصطناعي بشكل ذكي لتجنب الحظر الجغرافي
+# ربط وتأمين مفتاح الذكاء الاصطناعي
 gemini_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 if gemini_key != "":
     try:
@@ -58,7 +68,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي وحفظ المبيعات
+# دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي وحفظ الأرباح
 def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     clean_p = prompt.strip().lower()
     if has_image:
@@ -72,6 +82,7 @@ def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     else:
         return f"🤖 [مساعد المنصة]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
 
+# تهيئة متغيرات الجلسة الثابتة
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -86,6 +97,7 @@ def perform_logout():
     st.session_state.username = ""
     st.session_state.user_chats = {}
 
+# --- القائمة الجانبية (Sidebar ChatGPT Style) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -119,6 +131,7 @@ if st.session_state.logged_in:
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول من النموذج بالمنتصف لفتح الميزات.")
 
+# --- الواجهة الرئيسية بالمنتصف (Main Flow Control) ---
 if not st.session_state.logged_in:
     st.title("⚡ منصة المحادثة والحلول الذكية العالمية")
     st.write("الجيل القادم من تطبيقات الخدمات الرقمية وبوابات تحصيل الأموال المؤتمتة")
@@ -175,14 +188,13 @@ if not st.session_state.logged_in:
                 }
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
+
 else:
-    # 🛠️ معالجة مسطحة صريحة وعزل كامل للوحة المسؤول لمنع مشاكل الـ with col3 نهائياً
+    # 👑 إذا كان المشرف مسجل دخوله كـ admin، تظهر الإحصائيات الفاخرة المدمجة بشكل نقي وواضح جداً
     if st.session_state.username == "admin":
         st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
         db_users = supabase_request("users_subscriptions", "GET")
         total_count = len(db_users) if isinstance(db_users, list) else 5
         
-        # عرض الإحصائيات الحيوية بشكل خطي ومحمي تماماً
-        st.markdown(f'<div class="metric-container">👥 إجمالي الزوار والعملاء: <b>{total_count}</b></div>', unsafe_allow_html=True)
-        st.markdown('<div class="metric-container">💳 بوابة الدفع النشطة: <b>Stripe LIVE</b></div>', unsafe_allow_html=True)
-        st.markdown('<div class="metric-container">📂 خادم قاعدة البيانات: <b>Supabase REST v1</b></div>', unsafe_allow_html=True)
+        # بطاقات عصرية ملونة بخلفيات واضحة ومقروءة 100% لجميع الأجهزة
+        st.markdown(f'<div class="admin-card">👥 إجمالي الزوار والعملاء المسجلين: {total_count} مستخدمين</div>', unsafe_allow_html=True)
