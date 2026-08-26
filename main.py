@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مرن مضاد للون الأبيض يضمن بروز حقل المحادثة والأزرار تحت أي ثيم للمتصفح
+# 2. تصميم مرن مضاد للون الأبيض لبروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -69,7 +69,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# 🛠️ دالة تفويض الخروج الفوري والآمن لإجبار المتصفح على قفل الحساب فوراً
+# دالة تفويض الخروج الفوري والآمن من الجذور
 def logout_callback():
     st.session_state.logged_in = False
     st.session_state.username = ""
@@ -111,7 +111,6 @@ if st.session_state.logged_in:
         pass
 
     st.sidebar.markdown("---")
-    # 🛠️ ربط دالة الخروج المباشر بالزر لحل المشكلة نهائياً
     st.sidebar.button("🚪 تسجيل الخروج من الحساب", on_click=logout_callback, use_container_width=True, type="secondary")
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
@@ -140,7 +139,7 @@ if not st.session_state.logged_in:
                 
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_data = res
+                    user_data = res[0]
                 elif isinstance(res, dict):
                     user_data = res
                 
@@ -202,15 +201,16 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل المخزنة
+    # عرض الرسائل المخزنة تاريخياً بالجلسة الحالية
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
+    # حقل الإدخال الخطي الأصلي المستقر لاستقبال وطباعة الرد الفوري السريع
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
     
     if user_input:
+        # 1. حفظ وعرض رسالة المستخدم في الواجهة أولاً
+        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.write(user_input)
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
