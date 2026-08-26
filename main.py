@@ -79,7 +79,7 @@ def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     if "مرحبا" in clean_p or "أهلاً" in clean_p or "السلام" in clean_p:
         return "أهلاً بك في منصتك المتكاملة والعصرية للذكاء الاصطناعي وإدارة البيانات! كيف يمكنني مساعدتك اليوم في تيسير أعمالك أو الإجابة على استفساراتك البرمجية والمالية؟"
     elif "سعر" in clean_p or "اشتراك" in clean_p or "باقة" in clean_p or "أموال" in clean_p:
-        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً، وتمنحك وصولاً كاملًا وغير محدود لكافة الخدمات والوسائط المتقدمة، مع معالجة مالية آمنة ومباشرة عبر حساب شركتك الـ LLC ببطاقات Visa و Mastercard."
+        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً، وتمنحك وصولاً كاملاً وغير محدود لكافة الخدمات والوسائط المتقدمة، مع معالجة مالية آمنة ومباشرة عبر حساب شركتك الـ LLC ببطاقات Visa و Mastercard."
     else:
         return f"🤖 [مساعد المنصة]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
 
@@ -88,8 +88,6 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
-
-# 🛠️ هيكلة وإدارة سجل دردشات مخصص لكل عميل بشكل منفصل تماماً (ChatGPT Style)
 if "user_chats" not in st.session_state:
     st.session_state.user_chats = {}
 if "current_chat_id" not in st.session_state:
@@ -125,7 +123,6 @@ def render_admin_dashboard():
 
 # 💬 دالة مستقلة تماماً لبناء واجهة شات الذكاء الاصطناعي المطور لضمان ثبات الإزاحة ومنع اختفاء الرسائل
 def render_chat_interface():
-    # تأمين وجود مصفوفة للدردشة الحالية للمستخدم الحالي لضمان عدم حدوث أي خطأ برميجي
     current_user = st.session_state.username
     if current_user not in st.session_state.user_chats:
         st.session_state.user_chats[current_user] = {"الدردشة الافتراضية 💬": []}
@@ -135,14 +132,11 @@ def render_chat_interface():
         st.session_state.user_chats[current_user][active_chat_id] = []
 
     st.markdown(f"<h2>💬 نافذة المحادثة النشطة: {active_chat_id}</h2>", unsafe_allow_html=True)
-    
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي (TXT) للتحليل الفوري داخل الدردشة الحالية:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض تاريخ رسائل هذه الدردشة المحددة بدقة وثبات فائق
     for msg in st.session_state.user_chats[current_user][active_chat_id]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال لرسائل المحادثة (ChatGPT Style)
     user_input = st.chat_input("💡 اكتب سؤالك هنا وااضغط Enter وسيجيبك المساعد فوراً وبثبات تام...", key="global_chat_input_box")
     
     if user_input:
@@ -193,10 +187,13 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     st.sidebar.subheader("💬 سجل دردشات ChatGPT")
     
-    # تأمين وجود الهيكل المخصص للمستخدم في الذاكرة
     if current_user not in st.session_state.user_chats:
         st.session_state.user_chats[current_user] = {"الدردشة الافتراضية 💬": []}
         
-    # زر إنشاء شات جديد تماماً ومنفصل للعميل الحالي
-    new_chat_name = st.sidebar.text_input("📝 عنوان دردشة جديدة:", key="sidebar_new_chat_title_box").strip()
-    if st.sidebar.button("➕ افتح دردشة جديدة", use_container_width=True):
+    # 🛠️ معالجة احترافية عصرية لفتح دردشة جديدة بداخل استمارة معزولة لحماية مسافات بايثون 100% من الأخطاء
+    with st.sidebar.form("new_chat_form", clear_on_submit=True):
+        new_chat_name = st.text_input("📝 عنوان دردشة جديدة:", placeholder="اكتب اسم الدردشة...").strip()
+        submit_new_chat = st.form_submit_button("➕ افتح دردشة جديدة", use_container_width=True)
+        if submit_new_chat and new_chat_name and new_chat_name not in st.session_state.user_chats[current_user]:
+            st.session_state.user_chats[current_user][new_chat_name] = []
+            st.session_state.current_chat_id = new_chat_name
