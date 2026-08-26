@@ -185,15 +185,14 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
-# --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً لمنع اختفاء أي عنصر في الثيم الفاتح ---
+# --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً ---
 else:
-    # 👑 أولاً: إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نعرض له جدول البيانات في الأعلى كرت مستقل
+    # 👑 أولاً: إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نعرض له جدول البيانات في الأعلى
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
         all_users_resp = supabase_request("users_subscriptions", "GET")
         total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
         
-        # كروت الأرقام والإحصاءات المباشرة
         col1, col2, col3 = st.columns(3)
         col1.metric(label="👥 إجمالي المستخدمين المسجلين", value=f"{total_users_count} مستخدمين")
         col2.metric(label="💳 بوابات الدفع الفعالة", value="Stripe LIVE")
@@ -207,8 +206,8 @@ else:
     # 💬 ثانياً: واجهة شات المحادثة الذكية الموحدة والظاهرة للجميع (Admin + المستخدمين)
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     
-    # حقل رفع الملفات والصور البارز
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # طباعة وعرض فقاعات الرسائل السابقة بوضوح فائق ومقاوم للون الأبيض
+    # 🛠️ تم تصحيح وبناء مسافات الدوران (Indentation) هنا بدقة كاملة لإنهاء خطأ السطر 214 نهائياً
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
+        if msg["role"] == "user":
