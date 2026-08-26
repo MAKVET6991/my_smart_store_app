@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم آمن ومستقر يدعم البروز التام لجميع العناصر
+# 2. تصميم مرن مضاد للون الأبيض يضمن بروز حقل المحادثة والأزرار تحت أي ثيم للمتصفح
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -54,7 +54,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State)
+# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -64,7 +64,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة (Sidebar) ---
+# --- القائمة الجانبية المستقرة والكاملة لجميع الميزات (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -129,7 +129,14 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                
+                # 🛠️ معالجة خطية معززة تضمن تفكيك القائمة المسترجعة وتحويلها لقاموس لمنع الـ AttributeError نهائياً
+                user_data = None
+                if isinstance(res, list) and len(res) > 0:
+                    user_data = res[0]
+                elif isinstance(res, dict):
+                    user_data = res
+                
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -189,7 +196,7 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # 🛠️ الحل الخطي النهائي والمحمي: عرض الرسائل القديمة بنظام الفقاعات الأصلي المباشر لـ Streamlit لإنهاء أخطاء الإزاحة تماماً وبشكل حاسم
+    # عرض الرسائل القديمة بنظام الفقاعات المستقر لـ Streamlit
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
@@ -206,10 +213,5 @@ else:
             if uploaded_file and uploaded_file.type.startswith("image/"):
                 try:
                     gemini_inputs.append(Image.open(uploaded_file))
-                except:
-                    pass
-            if uploaded_file and uploaded_file.type == "text/plain":
-                try:
-                    gemini_inputs.append(uploaded_file.read().decode("utf-8"))
                 except:
                     pass
