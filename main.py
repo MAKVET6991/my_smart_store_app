@@ -101,77 +101,6 @@ def perform_logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
 
-# 👑 دالة مستقلة تماماً لبناء لوحة المسؤول (Admin Dashboard) بشكل رائع ومنفصل
-def render_admin_dashboard():
-    st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
-    st.write("مراقبة الاشتراكات، حركة غرف المحادثة وحجم الإيرادات الفعلي من داخل قاعدة البيانات")
-    
-    db_users = supabase_request("users_subscriptions", "GET")
-    total_count = len(db_users) if isinstance(db_users, list) else 5
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f'<div class="card-box"><div class="card-title">👥 إجمالي الزوار والعملاء</div><div class="card-value">{total_count}</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="card-box"><div class="card-title">💳 بوابة الدفع الحية</div><div class="card-value">Stripe</div></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="card-box"><div class="card-title">📂 قاعدة البيانات</div><div class="card-value">Supabase</div></div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown('<div class="card-box"><div class="card-title">💰 سعر باقة الاشتراك</div><div class="card-value">$20/M</div></div>', unsafe_allow_html=True)
-        
-    st.subheader("📋 كشف حساب وجدول المشتركين النشطين (Supabase Data Sync)")
-    view_data = db_users if isinstance(db_users, list) and len(db_users) > 0 else [{"username": "malek", "subscription_status": "trial", "stripe_customer_id": "cus_123"}]
-    st.dataframe(view_data, use_container_width=True)
-    st.markdown("<hr style='border-color: #4f46e5; border-width: 2px;'>", unsafe_allow_html=True)
-
-# 💬 دالة مستقلة تماماً لبناء واجهة شات الذكاء الاصطناعي المطور لضمان ثبات الإزاحة
-def render_chat_interface():
-    st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
-    st.write("منظومة معالجة وتحليل متطورة تدعم قراءة الصور والملفات فوراُ والحصول على الردود السريعة وحفظ المحادثات.")
-    
-    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي (TXT) للتحليل الفوري والمباشر:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
-    
-    # عرض تاريخ الرسائل بثبات كامل من ذاكرة الغرفة النشطة
-    for msg in st.session_state.chat_rooms[st.session_state.active_room]:
-        st.chat_message(msg["role"]).write(msg["content"])
-            
-    # pقل الإدخال لرسائل المحادثة
-    user_input = st.chat_input("💡 اكتب سؤالك هنا واضغط Enter وسيجيبك المساعد فوراً وبثبات تام...", key="global_chat_input_box")
-    
-    if user_input:
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        st.chat_message("user").write(user_input)
-        
-        is_image = False
-        is_file = False
-        gemini_inputs = [user_input]
-        
-        if uploaded_file:
-            if uploaded_file.type.startswith("image/"):
-                is_image = True
-                try: gemini_inputs.append(Image.open(uploaded_file))
-                except: pass
-            elif uploaded_file.type == "text/plain":
-                is_file = True
-                try: gemini_inputs.append(uploaded_file.read().decode("utf-8"))
-                except: pass
-                
-        ai_reply = ""
-        if model:
-            with st.spinner("جاري جلب الإجابة الفورية من خوادم الذكاء الاصطناعي..."):
-                try:
-                    response = model.generate_content(gemini_inputs)
-                    ai_reply = response.text
-                except:
-                    ai_reply = ""
-                    
-        if ai_reply == "":
-            ai_reply = get_advanced_local_ai_reply(user_input, has_image=is_image, has_file=is_file)
-            
-        st.chat_message("assistant").write(ai_reply)
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "assistant", "content": ai_reply})
-        st.rerun()
-
 # --- القائمة الجانبية (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
@@ -204,3 +133,80 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     st.sidebar.button("🚪 تسجيل الخروج الآمن", on_click=perform_logout, use_container_width=True, type="secondary")
 else:
+    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح ميزات المنصة والوسائط.")
+
+# --- الواجهة الرئيسية بالمنتصف ---
+
+# القسم الأول: في حال عدم تسجيل الدخول (عرض شاشات الدخول والاشتراك)
+if not st.session_state.logged_in:
+    st.title("⚡ منصة المحادثة والحلول الذكية العالمية")
+    st.write("الجيل القادم من تطبيقات الخدمات الرقمية وبوابات تحصيل الأموال المؤتمتة")
+    
+    tab1, tab2 = st.tabs(["🔑 تسجيل الدخول السريع", "📝 إنشاء حساب مستخدم جديد"])
+    
+    with tab1:
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        u_in = st.text_input("👤 اسم المستخدم الحالي", key="login_user_input").strip()
+        p_in = st.text_input("🔒 كلمة المرور الحسابية", type="password", key="login_pass_input")
+        login_clicked = st.button("🚀 دخول آمن للمنصة", use_container_width=True, type="primary")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if login_clicked:
+            if u_in == "admin" and p_in == "admin123":
+                st.session_state.logged_in = True
+                st.session_state.username = "admin"
+                st.rerun()
+            else:
+                res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{u_in}"})
+                u_dict = None
+                if isinstance(res, list) and len(res) > 0:
+                    u_dict = res[0]
+                elif isinstance(res, dict):
+                    u_dict = res
+                
+                if u_dict and u_dict.get("password_hash") == p_in:
+                    st.session_state.logged_in = True
+                    st.session_state.username = u_in
+                    st.rerun()
+                else:
+                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
+                    
+    with tab2:
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        r_user = st.text_input("👤 اختر اسم مستخدم جديد للزائر", key="reg_user_input").strip()
+        r_pass = st.text_input("🔒 اختر كلمة مرور قوية وآمنة", type="password", key="reg_pass_input")
+        reg_clicked = st.button("✨ تفعيل وإنشاء حساب الزائر فوراً", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if reg_clicked and r_user and r_pass:
+            check = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{r_user}"})
+            if check and len(check) > 0:
+                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام!")
+            else:
+                cust_id = ""
+                if stripe.api_key:
+                    try:
+                        customer = stripe.Customer.create(description=f"User: {r_user}")
+                        cust_id = customer.id
+                    except:
+                        cust_id = ""
+                f_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                payload = {
+                    "username": r_user,
+                    "password_hash": r_pass,
+                    "subscription_status": "trial",
+                    "stripe_customer_id": cust_id,
+                    "trial_end_date": f_trial
+                }
+                supabase_request("users_subscriptions", "POST", json_data=payload)
+                st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
+
+# القسم الثاني: في حال تسجيل دخول المالك admin (لوحة تحكم عصرية مستقلة مسطحة 100%)
+if st.session_state.logged_in and st.session_state.username == "admin":
+    st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
+    st.write("مراقبة الاشتراكات، حركة غرف المحادثة وحجم الإيرادات الفعلي من داخل قاعدة البيانات")
+    
+    db_users = supabase_request("users_subscriptions", "GET")
+    total_count = len(db_users) if isinstance(db_users, list) else 5
+    
+    col1, col2, col3, col4 = st.columns(4)
