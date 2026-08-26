@@ -147,7 +147,7 @@ else:
     gemini_error = "GEMINI_API_KEY غير موجود في Secrets."
 
 
-GEMINI_MODEL = "gemini-3.7-flash"
+GEMINI_MODEL = "gemini-3.6-flash"
 
 
 # =========================================================
