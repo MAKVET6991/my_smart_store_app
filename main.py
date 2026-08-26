@@ -129,7 +129,7 @@ if st.session_state.logged_in:
     st.sidebar.markdown("---")
     st.sidebar.button("🚪 تسجيل الخروج الآمن", on_click=perform_logout, use_container_width=True, type="secondary")
 else:
-    st.sidebar.warning("🔒 يرجى تسجيل الدخول من النموذج بالمنتصف لفتح الميزات.")
+    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
 # --- الواجهة الرئيسية بالمنتصف (Main Flow Control) ---
 if not st.session_state.logged_in:
@@ -196,5 +196,5 @@ else:
         db_users = supabase_request("users_subscriptions", "GET")
         total_count = len(db_users) if isinstance(db_users, list) else 5
         
-        # بطاقات عصرية ملونة بخلفيات واضحة ومقروءة 100% لجميع الأجهزة
         st.markdown(f'<div class="admin-card">👥 إجمالي الزوار والعملاء المسجلين: {total_count} مستخدمين</div>', unsafe_allow_html=True)
+        st.markdown('<div class="admin-card">💳 بوابة الدفع والتحصيل الحية: Stripe Live API</div>', unsafe_allow_html=True)
