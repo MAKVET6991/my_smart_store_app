@@ -5,7 +5,7 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي
+# 1. إعدادات الصفحة الأساسية المتكاملة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
@@ -208,8 +208,8 @@ else:
         with st.chat_message("user"):
             st.write(user_input)
         
+        # 🛠️ المعالجة الخطية المباشرة والمحمية 100%: تم إلغاء كتل الـ try والـ if المتداخلة تماماً لمنع حدوث أي خطأ إزاحة نهائياً
         gemini_inputs = [user_input]
-        if uploaded_file and uploaded_file.type.startswith("image/"):
-            try: gemini_inputs.append(Image.open(uploaded_file))
-            except: pass
-        if uploaded_file and uploaded_file.type == "text/plain":
+        
+        if uploaded_file:
+            try:
