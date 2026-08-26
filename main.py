@@ -29,8 +29,14 @@ gemini_init_error = None
 
 if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # تنظيف المفتاح تماماً من أي مسافات مخفية تم نسخها بالخطأ
+        clean_key = st.secrets["GEMINI_API_KEY"].strip()
+        genai.configure(api_key=clean_key)
+        # 🛠️ محاولة الاتصال بالنموذج فلاش أولاً، وفي حال وجود قيود حساب يتراجع تلقائياً لـ gemini-pro المجاني المستقر
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+        except:
+            model = genai.GenerativeModel("gemini-pro")
     except Exception as e:
         gemini_init_error = f"فشلت تهيئة مكتبة Google AI: {str(e)}"
 else:
@@ -137,7 +143,7 @@ if not st.session_state.logged_in:
                 
                 final_user_data = None
                 if isinstance(res, list) and len(res) > 0:
-                    final_user_data = res[0]
+                    final_user_data = res
                 elif isinstance(res, dict):
                     final_user_data = res
                 
@@ -199,7 +205,7 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # طباعة الرسائل السابقة المخزنة في الغرفة بشكل ثابت ومستقر
+    # طباعة الرسائل السابقة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
@@ -207,10 +213,5 @@ else:
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
-        # 1. حفظ ورسم رسالة المستخدم فوراً على الشاشة
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
-        
-        gemini_inputs = [user_input]
-        if uploaded_file and uploaded_file.type.startswith("image/"):
-            gemini_inputs.append(Image.open(uploaded_file))
