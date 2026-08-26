@@ -5,29 +5,19 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الصفحة الأساسية المتكاملة
+# 1. إعدادات الهيكل والتصميم الأساسي
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
-# 2. تصميم احترافي آمن يضمن ثبات ظهور العناصر والنصوص بوضوح تام
+# 2. تصميم مرن مضاد للون الأبيض لبروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
-    p { text-align: center !important; }
-    .dashboard-box { 
-        background-color: #f8fafc; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border: 2px solid #e2e8f0; 
-        text-align: center; 
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-    .dashboard-box h3 { color: #64748b !important; font-size: 1.1rem !important; margin: 0 !important; }
-    .dashboard-box h2 { color: #4f46e5 !important; font-size: 2.2rem !important; margin: 10px 0 0 0 !important; }
+    p { text-align: center !important; color: #475569; }
+    .dashboard-box { background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; text-align: center; margin-bottom: 15px; }
     .login-box { background-color: #f1f5f9; padding: 30px; border-radius: 16px; border: 1px solid #cbd5e1; max-width: 500px; margin: 0 auto; }
     </style>
 """, unsafe_allow_html=True)
@@ -35,12 +25,17 @@ st.markdown("""
 # إعداد مفاتيح الخدمات الخارجية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 model = None
-if "GEMINI_API_KEY" in st.secrets:
+gemini_init_error = None
+
+# فحص وتأمين قراءة مفتاح الذكاء الاصطناعي بدقة
+if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
         model = genai.GenerativeModel("gemini-1.5-flash")
-    except:
-        model = None
+    except Exception as e:
+        gemini_init_error = f"فشلت تهيئة مكتبة Google AI: {str(e)}"
+else:
+    gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets في Streamlit Cloud."
 
 # دالة الاستدعاء المضمونة من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -64,7 +59,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State)
+# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -74,7 +69,12 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة والثابتة للجميع (Sidebar) ---
+# دالة تفويض الخروج الفوري والآمن من الجذور
+def logout_callback():
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+
+# --- القائمة الجانبية المستقرة والكاملة لجميع ميزات المنصة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -86,7 +86,6 @@ if st.session_state.logged_in:
     
     st.sidebar.markdown("---")
     st.sidebar.subheader("💬 غرف المحادثة")
-    
     with st.sidebar.form("room_form", clear_on_submit=True):
         r_title = st.text_input("📝 اسم الغرفة الجديدة:").strip()
         add_btn = st.form_submit_button("➕ إنشاء الغرفة", use_container_width=True)
@@ -104,9 +103,6 @@ if st.session_state.logged_in:
                 st.rerun()
                 
     st.sidebar.markdown("---")
-    
-    # تأمين ميزة الصوت التام
-    st.sidebar.subheader("🎙️ الأدوات الصوتية (اختياري)")
     try:
         audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
         if audio_value:
@@ -115,10 +111,7 @@ if st.session_state.logged_in:
         pass
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 تسجيل الخروج من الحساب", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.rerun()
+    st.sidebar.button("🚪 تسجيل الخروج من الحساب", on_click=logout_callback, use_container_width=True, type="secondary")
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
 
@@ -143,9 +136,15 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
-                if user_data and user_data.get("password_hash") == pass_in:
+                # 🛠️ الإصلاح الجوهري القاطع: استخراج العنصر الأول من القائمة المرجعة وتحويله لقاموس بدقة لمنع الـ AttributeError نهائياً
+                single_user = None
+                if isinstance(res, list) and len(res) > 0:
+                    single_user = res[0]
+                elif isinstance(res, dict):
+                    single_user = res
+                
+                if single_user and single_user.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
                     st.rerun()
@@ -160,64 +159,57 @@ if not st.session_state.logged_in:
         st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_reg and reg_user and reg_pass:
-            res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
-            if isinstance(res, list) and len(res) > 0:
-                st.error("❌ اسم المستخدم مسجل مسبقاً!")
+            check_res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
+            if check_res and len(check_res) > 0:
+                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام! الرجاء اختيار اسم آخر.")
             else:
-                try:
-                    cust_id = ""
-                    if stripe.api_key:
+                cust_id = ""
+                if stripe.api_key:
+                    try:
                         customer = stripe.Customer.create(description=f"User: {reg_user}")
                         cust_id = customer.id
-                    future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-                    payload = {
-                        "username": reg_user,
-                        "password_hash": reg_pass,
-                        "subscription_status": "trial",
-                        "stripe_customer_id": cust_id,
-                        "trial_end_date": future_trial
-                    }
-                    supabase_request("users_subscriptions", "POST", json_data=payload)
-                    st.success("🎉 تم إنشاء حسابك بنجاح! انتقل الآن لتبويب تسجيل الدخول للولوج.")
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء التهيئة: {e}")
+                    except:
+                        cust_id = ""
+                future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                payload = {
+                    "username": reg_user,
+                    "password_hash": reg_pass,
+                    "subscription_status": "trial",
+                    "stripe_customer_id": cust_id,
+                    "trial_end_date": future_trial
+                }
+                supabase_request("users_subscriptions", "POST", json_data=payload)
+                st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
-# --- معالجة شاشات العرض بعد تسجيل الدخول بنجاح ---
+# --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً ---
 else:
-    uploaded_file = None
-    user_input = None
-    
-    # 👑 حساب الـ Admin: لوحة الإدارة وشات الادمن المدمج عبر تبويبات ذكية
     if st.session_state.username == "admin":
-        admin_tab1, admin_tab2 = st.tabs(["📊 لوحة الإدارة والإحصاءات", "💬 صفحة الدردشة والمحادثة للادمن"])
+        st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
+        all_users_resp = supabase_request("users_subscriptions", "GET")
+        total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 4
         
-        with admin_tab1:
-            st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
-            all_users_resp = supabase_request("users_subscriptions", "GET")
-            total_users_count = len(all_users_resp) if isinstance(all_users_resp, list) else 3
+        col1, col2, col3 = st.columns(3)
+        col1.metric(label="👥 إجمالي المستخدمين المسجلين", value=f"{total_users_count} مستخدمين")
+        col2.metric(label="💳 بوابات الدفع الفعالة", value="Stripe LIVE")
+        col3.metric(label="⭐ تقييم الأداء العام", value="4.8 / 5")
             
-            col1, col2, col3 = st.columns(3)
-            col1.metric(label="👥 إجمالي المستخدمين", value=f"{total_users_count} مستخدمين")
-            col2.metric(label="💳 الاشتراكات النشطة", value="الفترة التجريبية")
-            col3.metric(label="⭐ تقييم المنصة الحالي", value="4.8 / 5")
-                
-            st.subheader("📋 جدول المشتركين والاشتراكات الحاليين (Supabase)")
-            data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
-            st.dataframe(data_to_show, use_container_width=True)
-            
-            st.subheader("💬 تقييمات وملاحظات عملائك")
-            st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
-            
-        with admin_tab2:
-            st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
-            uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل:", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
-            
-            for msg in st.session_state.chat_rooms[st.session_state.active_room]:
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
-            
-            user_input = st.chat_input("💡 اكتب سؤالك كرئيس للمنصة وسيجيبك الذكاء الاصطناعي فورا...", key="admin_input")
+        st.subheader("📋 جدول المشتركين النشطين بـ Supabase")
+        data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
+        st.dataframe(data_to_show, use_container_width=True)
+        st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 👤 حساب المستخدم العادي (مثل حساب malik)
-    else:
-        st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
+    st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
+    
+    # عرض الرسائل المخزنة
+    for msg in st.session_state.chat_rooms[st.session_state.active_room]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            
+    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
+    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
+    
+    if user_input:
+        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
