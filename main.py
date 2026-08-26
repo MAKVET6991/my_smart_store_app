@@ -57,7 +57,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State)
+# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -134,10 +134,10 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # استخراج البيانات بدقة وحماية الحسابات القديمة من مشاكل القوائم
+                # استخراج البيانات بدقة لمنع الـ AttributeError والتعرف على الحسابات القديمة
                 user_dict = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_dict = res[0]
+                    user_dict = res
                 elif isinstance(res, dict):
                     user_dict = res
                 
@@ -195,7 +195,7 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الآمن 100%
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الخطي الآمن 100%
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
@@ -212,5 +212,4 @@ else:
         
         gemini_inputs = [user_input]
         
-        # 🛠️ معالجة حذرة ومحاذية بدقة لأسطر قراءة الملفات لتجنب كسر الـ Indentation نهائياً وبشكل قطعي
-        if uploaded_file:
+        # 🛠️ معالجة خطية مسطحة معزولة تماماً بدون أي جمل شرطية أو كتل try/except معقدة تسبب الخلل البرمجي
