@@ -48,7 +48,7 @@ if GEMINI_API_KEY:
         st.session_state["gemini_init_error"] = str(e)
 
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.6-flash"
 
 
 # =========================================================
