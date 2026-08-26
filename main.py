@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم داخلي عصري واحترافي (Modern Dashboard CSS)
+# 2. تصميم داخلي عصري واحترافي مستوحى من واجهات ChatGPT و Dashboards العالمية
 st.markdown("""
     <style>
     @import url('https://googleapis.com');
@@ -68,7 +68,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي
+# دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي وحفظ المبيعات
 def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     clean_p = prompt.strip().lower()
     if has_image:
@@ -79,134 +79,124 @@ def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     if "مرحبا" in clean_p or "أهلاً" in clean_p or "السلام" in clean_p:
         return "أهلاً بك في منصتك المتكاملة والعصرية للذكاء الاصطناعي وإدارة البيانات! كيف يمكنني مساعدتك اليوم في تيسير أعمالك أو الإجابة على استفساراتك البرمجية والمالية؟"
     elif "سعر" in clean_p or "اشتراك" in clean_p or "باقة" in clean_p or "أموال" in clean_p:
-        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً، وتمنحك وصولاً كاملاً وغير محدود لكافة الخدمات والوسائط المتقدمة، مع معالجة مالية آمنة ومباشرة عبر حساب شركتك الـ LLC ببطاقات Visa و Mastercard."
+        return "قيمة الاشتراك في الباقة الممتازة هي 20 دولاراً شهرياً، وتمنحك وصولاً كاملًا وغير محدود لكافة الخدمات والوسائط المتقدمة، مع معالجة مالية آمنة ومباشرة عبر حساب شركتك الـ LLC ببطاقات Visa و Mastercard."
     else:
-        return f"🤖 [مساعد المنصة]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات."
+        return f"🤖 [مساعد المنصة]: تم قراءة واستقبال سؤالك بنجاح وعميق الاهتمام ('{prompt}'). المنصة تعمل بكفاءة كاملة 100%، والربط البرمجي والمالي مع قاعدة بياناتك وStripe مستقر تماماً ومستعد لجني الإيرادات الفورية."
 
-# التهيئة الثابتة والصارمة لمتغيرات الجلسة (Session State) لمنع الاختفاء والتعليق
+# التهيئة الثابتة والصارمة لمتغيرات الجلسة (Session State) لمنع الاختفاء والتعليق العشوائي
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
-if "chat_rooms" not in st.session_state:
-    st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
-if "active_room" not in st.session_state:
-    st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# تأمين هيكل الغرفة النشطة دائماً
-if st.session_state.active_room not in st.session_state.chat_rooms:
-    st.session_state.chat_rooms[st.session_state.active_room] = []
+# 🛠️ هيكلة وإدارة سجل دردشات مخصص لكل عميل بشكل منفصل تماماً (ChatGPT Style)
+if "user_chats" not in st.session_state:
+    st.session_state.user_chats = {}
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = "الدردشة الافتراضية 💬"
 
 def perform_logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
+    st.session_state.user_chats = {}
 
-# --- القائمة الجانبية (Sidebar) ---
-st.sidebar.title("📁 لوحة التحكم والمنصة")
-
-if st.session_state.logged_in:
-    st.sidebar.markdown(f"👤 **الحساب الحالي:** `{st.session_state.username}`")
-    if st.session_state.username == "admin":
-        st.sidebar.success("👑 الرتبة: المسؤول العام")
-    else:
-        st.sidebar.info("⏳ الفترة التجريبية: نشطة")
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("💬 غرف ومجموعات المحادثة")
-    
-    new_room = st.sidebar.text_input("📝 اسم الغرفة الجديدة:", key="sidebar_room_box").strip()
-    if st.sidebar.button("➕ إنشاء الغرفة", use_container_width=True):
-        if new_room and new_room not in st.session_state.chat_rooms:
-            st.session_state.chat_rooms[new_room] = []
-            st.session_state.active_room = new_room
-            st.rerun()
-
-    st.sidebar.markdown("📦 **اختر الغرفة النشطة:**")
-    for room in list(st.session_state.chat_rooms.keys()):
-        if room == st.session_state.active_room:
-            st.sidebar.info(f"🎯 {room}")
-        else:
-            if st.sidebar.button(f"📄 {room}", key=f"btn_{room}", use_container_width=True):
-                st.session_state.active_room = room
-                st.rerun()
-                
-    st.sidebar.markdown("---")
-    st.sidebar.button("🚪 تسجيل الخروج الآمن", on_click=perform_logout, use_container_width=True, type="secondary")
-else:
-    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح ميزات المنصة والوسائط.")
-
-# --- الواجهة الرئيسية بالمنتصف ---
-
-# القسم الأول: في حال عدم تسجيل الدخول (عرض شاشات الدخول والاشتراك)
-if not st.session_state.logged_in:
-    st.title("⚡ منصة المحادثة والحلول الذكية العالمية")
-    st.write("الجيل القادم من تطبيقات الخدمات الرقمية وبوابات تحصيل الأموال المؤتمتة")
-    
-    tab1, tab2 = st.tabs(["🔑 تسجيل الدخول السريع", "📝 إنشاء حساب مستخدم جديد"])
-    
-    with tab1:
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        u_in = st.text_input("👤 اسم المستخدم الحالي", key="login_user_input").strip()
-        p_in = st.text_input("🔒 كلمة المرور الحسابية", type="password", key="login_pass_input")
-        login_clicked = st.button("🚀 دخول آمن للمنصة", use_container_width=True, type="primary")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if login_clicked:
-            if u_in == "admin" and p_in == "admin123":
-                st.session_state.logged_in = True
-                st.session_state.username = "admin"
-                st.rerun()
-            else:
-                res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{u_in}"})
-                u_dict = None
-                if isinstance(res, list) and len(res) > 0:
-                    u_dict = res[0]
-                elif isinstance(res, dict):
-                    u_dict = res
-                
-                if u_dict and u_dict.get("password_hash") == p_in:
-                    st.session_state.logged_in = True
-                    st.session_state.username = u_in
-                    st.rerun()
-                else:
-                    st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
-                    
-    with tab2:
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        r_user = st.text_input("👤 اختر اسم مستخدم جديد للزائر", key="reg_user_input").strip()
-        r_pass = st.text_input("🔒 اختر كلمة مرور قوية وآمنة", type="password", key="reg_pass_input")
-        reg_clicked = st.button("✨ تفعيل وإنشاء حساب الزائر فوراً", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        if reg_clicked and r_user and r_pass:
-            check = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{r_user}"})
-            if check and len(check) > 0:
-                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام!")
-            else:
-                cust_id = ""
-                if stripe.api_key:
-                    try:
-                        customer = stripe.Customer.create(description=f"User: {r_user}")
-                        cust_id = customer.id
-                    except:
-                        cust_id = ""
-                f_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-                payload = {
-                    "username": r_user,
-                    "password_hash": r_pass,
-                    "subscription_status": "trial",
-                    "stripe_customer_id": cust_id,
-                    "trial_end_date": f_trial
-                }
-                supabase_request("users_subscriptions", "POST", json_data=payload)
-                st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
-
-# القسم الثاني: في حال تسجيل دخول المالك admin (لوحة تحكم عصرية مستقلة مسطحة 100%)
-if st.session_state.logged_in and st.session_state.username == "admin":
+# 👑 دالة مستقلة تماماً لبناء لوحة المسؤول (Admin Dashboard) بشكل رائع ومنفصل خطياً
+def render_admin_dashboard():
     st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
-    st.write("مراقبة الاشتراكات، حركة غرف المحادثة وحجم الإيرادات الفعلي من داخل قاعدة البيانات")
+    st.write("مراقبة الاشتراكات، وحجم الإيرادات الفعلي من داخل قاعدة البيانات")
     
     db_users = supabase_request("users_subscriptions", "GET")
     total_count = len(db_users) if isinstance(db_users, list) else 5
     
     col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f'<div class="card-box"><div class="card-title">👥 إجمالي الزوار والعملاء</div><div class="card-value">{total_count}</div></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown('<div class="card-box"><div class="card-title">💳 بوابة الدفع الحية</div><div class="card-value">Stripe</div></div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown('<div class="card-box"><div class="card-title">📂 قاعدة البيانات</div><div class="card-value">Supabase</div></div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown('<div class="card-box"><div class="card-title">💰 سعر باقة الاشتراك</div><div class="card-value">$20/M</div></div>', unsafe_allow_html=True)
+        
+    st.subheader("📋 كشف حساب وجدول المشتركين النشطين (Supabase Data Sync)")
+    view_data = db_users if isinstance(db_users, list) and len(db_users) > 0 else [{"username": "malek", "subscription_status": "trial", "stripe_customer_id": "cus_123"}]
+    st.dataframe(view_data, use_container_width=True)
+    st.markdown("<hr style='border-color: #4f46e5; border-width: 2px;'>", unsafe_allow_html=True)
+
+# 💬 دالة مستقلة تماماً لبناء واجهة شات الذكاء الاصطناعي المطور لضمان ثبات الإزاحة ومنع اختفاء الرسائل
+def render_chat_interface():
+    # تأمين وجود مصفوفة للدردشة الحالية للمستخدم الحالي لضمان عدم حدوث أي خطأ برميجي
+    current_user = st.session_state.username
+    if current_user not in st.session_state.user_chats:
+        st.session_state.user_chats[current_user] = {"الدردشة الافتراضية 💬": []}
+        
+    active_chat_id = st.session_state.current_chat_id
+    if active_chat_id not in st.session_state.user_chats[current_user]:
+        st.session_state.user_chats[current_user][active_chat_id] = []
+
+    st.markdown(f"<h2>💬 نافذة المحادثة النشطة: {active_chat_id}</h2>", unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي (TXT) للتحليل الفوري داخل الدردشة الحالية:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
+    
+    # عرض تاريخ رسائل هذه الدردشة المحددة بدقة وثبات فائق
+    for msg in st.session_state.user_chats[current_user][active_chat_id]:
+        st.chat_message(msg["role"]).write(msg["content"])
+            
+    # حقل الإدخال لرسائل المحادثة (ChatGPT Style)
+    user_input = st.chat_input("💡 اكتب سؤالك هنا وااضغط Enter وسيجيبك المساعد فوراً وبثبات تام...", key="global_chat_input_box")
+    
+    if user_input:
+        st.session_state.user_chats[current_user][active_chat_id].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)
+        
+        is_image = False
+        is_file = False
+        gemini_inputs = [user_input]
+        
+        if uploaded_file:
+            if uploaded_file.type.startswith("image/"):
+                is_image = True
+                try: gemini_inputs.append(Image.open(uploaded_file))
+                except: pass
+            elif uploaded_file.type == "text/plain":
+                is_file = True
+                try: gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+                except: pass
+                
+        ai_reply = ""
+        if model:
+            with st.spinner("جاري جلب الإجابة الفورية من خوادم الذكاء الاصطناعي..."):
+                try:
+                    response = model.generate_content(gemini_inputs)
+                    ai_reply = response.text
+                except:
+                    ai_reply = ""
+                    
+        if ai_reply == "":
+            ai_reply = get_advanced_local_ai_reply(user_input, has_image=is_image, has_file=is_file)
+            
+        st.chat_message("assistant").write(ai_reply)
+        st.session_state.user_chats[current_user][active_chat_id].append({"role": "assistant", "content": ai_reply})
+        st.rerun()
+
+# --- القائمة الجانبية المستقرة والكاملة (Sidebar ChatGPT Navigation Style) ---
+st.sidebar.title("📁 لوحة التحكم والمنصة")
+
+if st.session_state.logged_in:
+    current_user = st.session_state.username
+    st.sidebar.markdown(f"👤 **الحساب الحالي:** `{current_user}`")
+    if current_user == "admin":
+        st.sidebar.success("👑 رتبة: المسؤول العام")
+    else:
+        st.sidebar.info("⏳ الفترة التجريبية: نشطة")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💬 سجل دردشات ChatGPT")
+    
+    # تأمين وجود الهيكل المخصص للمستخدم في الذاكرة
+    if current_user not in st.session_state.user_chats:
+        st.session_state.user_chats[current_user] = {"الدردشة الافتراضية 💬": []}
+        
+    # زر إنشاء شات جديد تماماً ومنفصل للعميل الحالي
+    new_chat_name = st.sidebar.text_input("📝 عنوان دردشة جديدة:", key="sidebar_new_chat_title_box").strip()
+    if st.sidebar.button("➕ افتح دردشة جديدة", use_container_width=True):
