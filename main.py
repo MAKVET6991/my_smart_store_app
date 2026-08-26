@@ -190,10 +190,12 @@ if st.session_state.logged_in:
     if current_user not in st.session_state.user_chats:
         st.session_state.user_chats[current_user] = {"الدردشة الافتراضية 💬": []}
         
-    # 🛠️ معالجة احترافية عصرية لفتح دردشة جديدة بداخل استمارة معزولة لحماية مسافات بايثون 100% من الأخطاء
     with st.sidebar.form("new_chat_form", clear_on_submit=True):
         new_chat_name = st.text_input("📝 عنوان دردشة جديدة:", placeholder="اكتب اسم الدردشة...").strip()
         submit_new_chat = st.form_submit_button("➕ افتح دردشة جديدة", use_container_width=True)
         if submit_new_chat and new_chat_name and new_chat_name not in st.session_state.user_chats[current_user]:
             st.session_state.user_chats[current_user][new_chat_name] = []
             st.session_state.current_chat_id = new_chat_name
+            st.rerun()
+
+    st.sidebar.markdown("📂 **التنقل بين دردشاتك القديمة:**")
