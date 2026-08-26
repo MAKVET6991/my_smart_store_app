@@ -131,7 +131,6 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # المعالجة والاصلاح الجذري لقراءة القوائم المسترجعة من قاعدة البيانات للحسابات القديمة
                 user_data = None
                 if isinstance(res, list) and len(res) > 0:
                     user_data = res[0]
@@ -177,7 +176,6 @@ if not st.session_state.logged_in:
 
 # --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً ---
 else:
-    # 👑 أولاً: لوحة مراقبة حساب المسؤول (Admin)
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
         all_users_resp = supabase_request("users_subscriptions", "GET")
@@ -193,7 +191,7 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 ثانياً: واجهة شات المحادثة الذكية الموحدة
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
@@ -212,4 +210,8 @@ else:
         
         with st.chat_message("assistant"):
             if model:
-                # 🛠️ تم تصحيح وبناء كامل مسافات الإزاحة البرمجية (Indentation) التابعة للـ with spinner بنجاح مطلق
+                gemini_inputs = [user_input]
+                if uploaded_file and uploaded_file.type.startswith("image/"):
+                    try:
+                        img_data = Image.open(uploaded_file)
+                        gemini_inputs.append(img_data)
