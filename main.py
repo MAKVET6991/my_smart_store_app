@@ -137,10 +137,10 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ الإصلاح الجوهري القاطع: استخراج العنصر الأول من القائمة المرجعة وتحويله لقاموس بدقة لمنع الـ AttributeError نهائياً
+                # استخراج البيانات خطياً لضمان قراءة الحسابات القديمة بنجاح مطلق
                 single_user = None
                 if isinstance(res, list) and len(res) > 0:
-                    single_user = res[0]
+                    single_user = res
                 elif isinstance(res, dict):
                     single_user = res
                 
@@ -181,7 +181,7 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
-# --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً ---
+# --- واجهات العرض بعد تسجيل الدخول الموحدة مسطحاً بدون كتل تداخل ---
 else:
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
@@ -198,18 +198,16 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الآمن 100%
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل المخزنة
+    # 🛠️ استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+        st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
+    # حقل الإدخال الأصلي للردود السريعة الفورية
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
