@@ -5,13 +5,14 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي
+# 1. إعدادات الصفحة الأساسية لضمان ثبات الواجهة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
+# 2. تصميم احترافي لبروز الأزرار وحقول الإدخال واختفاء اللون الأبيض
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -21,25 +22,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفاتيح الخدمات الخارجية
+# إعداد مفاتيح Stripe
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
+
+# 🛠️ معالجة وتأمين استدعاء مفتاح الذكاء الاصطناعي بكافة الطرق الممكنة لضمان التفعيل
+gemini_key = st.secrets.get("GEMINI_API_KEY", st.secrets.get("gemini_api_key", ""))
 model = None
-gemini_init_error = None
 
-if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
+if gemini_key.strip() != "":
     try:
-        clean_key = st.secrets["GEMINI_API_KEY"].strip()
-        genai.configure(api_key=clean_key)
+        genai.configure(api_key=gemini_key.strip())
+        model = genai.GenerativeModel("gemini-1.5-flash")
+    except:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
-        except:
             model = genai.GenerativeModel("gemini-pro")
-    except Exception as e:
-        gemini_init_error = f"فشلت تهيئة مكتبة Google AI: {str(e)}"
-else:
-    gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets."
+        except:
+            model = None
 
-# دالة Supabase
+# دالة الاستدعاء من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -61,7 +61,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State)
+# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -139,9 +139,8 @@ if not st.session_state.logged_in:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
                 user_dict = None
-                if isinstance(res, list):
-                    if len(res) > 0:
-                        user_dict = res[0]
+                if isinstance(res, list) and len(res) > 0:
+                    user_dict = res[0]
                 elif isinstance(res, dict):
                     user_dict = res
                 
@@ -203,15 +202,16 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض التاريخ المباشر للرسائل المخزنة مؤقتاً
+    # عرض تاريخ الرسائل بثبات كامل
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # 🛠️ معالجة الشات عبر نموذج حماية الإدخال الفوري الموصى به لثبات الردود ومنع الاختفاء العشوائي
-    with st.form("chat_form", clear_on_submit=True):
-        user_input = st.text_input("💡 اكتب سؤالك أو استفسارك هنا واضغط على زر الإرسال للحصول على الرد الفوري الحقيقي...", placeholder="اكتب هنا...")
-        submit_chat = st.form_submit_button("🚀 إرسال السؤال للمساعد الذكي", use_container_width=True)
+    # حقل الإدخال المستقر والمعزول لحماية تدفق الشات وثبات الإجابات
+    with st.form("chat_input_form", clear_on_submit=True):
+        user_input = st.text_input("💡 اكتب سؤالك أو استفسارك هنا واضغط على زر الإرسال للحصول على الرد الفوري...", placeholder="اكتب سؤالك هنا...")
+        submit_button = st.form_submit_button("🚀 إرسال السؤال الآن", use_container_width=True)
         
-    if submit_chat and user_input.strip() != "":
-        # أرشفة رسالة العميل فورياً
+    if submit_button and user_input.strip() != "":
+        # أرشفة وعرض رسالة المستخدم فوراً بداخل واجهة الشات
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        st.chat_message("user").write(user_input)
