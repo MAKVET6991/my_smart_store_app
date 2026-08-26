@@ -5,7 +5,7 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي
+# 1. إعدادات الصفحة الأساسية المتكاملة
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
@@ -136,13 +136,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                
-                user_data = None
-                if isinstance(res, list) and len(res) > 0:
-                    user_data = res[0]
-                elif isinstance(res, dict):
-                    user_data = res
-                
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -201,16 +195,20 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل المخزنة تاريخياً بالجلسة الحالية
+    # عرض الرسائل المخزنة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل الإدخال الخطي الأصلي المستقر لاستقبال وطباعة الرد الفوري السريع
+    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
     
     if user_input:
-        # 1. حفظ وعرض رسالة المستخدم في الواجهة أولاً
+        # حفظ الرسالة بداخل الذاكرة أولاً
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.write(user_input)
+        
+        # 🛠️ معالجة وعرض الردود التتابعية المستقرة بدون تأخير أو مسح للواجهة
+        if model:
+            gemini_inputs = [user_input]
+            if uploaded_file and uploaded_file.type.startswith("image/"):
+                try: gemini_inputs.append(Image.open(uploaded_file))
