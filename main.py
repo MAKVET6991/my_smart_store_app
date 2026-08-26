@@ -9,7 +9,7 @@ import secrets
 
 
 # =========================================================
-# 1. إعداد الصفحة
+# PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -20,7 +20,7 @@ st.set_page_config(
 
 
 # =========================================================
-# 2. قراءة Secrets
+# SECRETS
 # =========================================================
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "").strip()
@@ -28,32 +28,31 @@ SUPABASE_URL = st.secrets.get("SUPABASE_URL", "").strip()
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "").strip()
 STRIPE_SECRET_KEY = st.secrets.get("STRIPE_SECRET_KEY", "").strip()
 STRIPE_PRICE_ID = st.secrets.get("STRIPE_PRICE_ID", "").strip()
-
 APP_URL = st.secrets.get("APP_URL", "").strip()
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "").strip()
 
 
 # =========================================================
-# 3. Gemini
+# GEMINI
 # =========================================================
 
 client = None
 
 if GEMINI_API_KEY:
-
     try:
         client = genai.Client(
             api_key=GEMINI_API_KEY
         )
-    except Exception:
+    except Exception as e:
         client = None
+        st.session_state["gemini_init_error"] = str(e)
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
 
 
 # =========================================================
-# 4. Stripe
+# STRIPE
 # =========================================================
 
 if STRIPE_SECRET_KEY:
@@ -61,59 +60,56 @@ if STRIPE_SECRET_KEY:
 
 
 # =========================================================
-# 5. التصميم
+# DESIGN
 # =========================================================
 
-st.markdown("""
-<style>
+st.markdown(
+    """
+    <style>
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+    @import url(
+        'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800'
+    );
 
-html, body, [class*="css"] {
-    font-family: 'Cairo', sans-serif;
-}
+    html, body, [class*="css"] {
+        font-family: 'Cairo', sans-serif;
+    }
 
-.stApp {
-    background: #f8fafc;
-}
+    .stApp {
+        background: #f8fafc;
+    }
 
-h1, h2, h3 {
-    font-weight: 800 !important;
-}
+    h1, h2, h3 {
+        font-weight: 800 !important;
+    }
 
-.main-card {
-    background: white;
-    padding: 28px;
-    border-radius: 22px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-}
+    .main-card {
+        background: white;
+        padding: 28px;
+        border-radius: 22px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
 
-.login-container {
-    max-width: 560px;
-    margin: 45px auto;
-    padding: 35px;
-    background: white;
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-}
+    .login-container {
+        max-width: 560px;
+        margin: 45px auto;
+        padding: 35px;
+        background: white;
+        border-radius: 24px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
 
-.metric-card {
-    background: white;
-    padding: 22px;
-    border-radius: 18px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-}
-
-</style>
-""", unsafe_allow_html=True)
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 # =========================================================
-# 6. Session State
+# SESSION STATE
 # =========================================================
 
 if "logged_in" not in st.session_state:
@@ -130,7 +126,7 @@ if "page" not in st.session_state:
 
 
 # =========================================================
-# 7. تشفير كلمات المرور
+# PASSWORD HASHING
 # =========================================================
 
 def hash_password(password):
@@ -153,7 +149,7 @@ def verify_password(password, stored_hash):
 
         salt, saved_hash = stored_hash.split(":")
 
-        calculated = hashlib.pbkdf2_hmac(
+        calculated_hash = hashlib.pbkdf2_hmac(
             "sha256",
             password.encode("utf-8"),
             salt.encode("utf-8"),
@@ -161,7 +157,7 @@ def verify_password(password, stored_hash):
         ).hex()
 
         return secrets.compare_digest(
-            calculated,
+            calculated_hash,
             saved_hash
         )
 
@@ -171,7 +167,7 @@ def verify_password(password, stored_hash):
 
 
 # =========================================================
-# 8. Supabase
+# SUPABASE REQUEST
 # =========================================================
 
 def supabase_request(
@@ -243,13 +239,15 @@ def supabase_request(
 
         return []
 
-    except Exception:
+    except Exception as e:
+
+        st.session_state["last_supabase_error"] = str(e)
 
         return []
 
 
 # =========================================================
-# 9. تحميل المحادثات المحفوظة
+# LOAD CHAT HISTORY
 # =========================================================
 
 def load_chat_history(username):
@@ -272,25 +270,35 @@ def load_chat_history(username):
 
         role = message.get("role")
 
-        if role not in ["user", "assistant"]:
-            continue
+        content = message.get(
+            "content",
+            ""
+        )
 
-        history.append({
-            "role": role,
-            "content": message.get(
-                "content",
-                ""
+        if role in ["user", "assistant"] and content:
+
+            history.append(
+                {
+                    "role": role,
+                    "content": content
+                }
             )
-        })
 
     return history
 
 
 # =========================================================
-# 10. حفظ رسالة
+# SAVE MESSAGE
 # =========================================================
 
-def save_message(username, role, content):
+def save_message(
+    username,
+    role,
+    content
+):
+
+    if not username or not content:
+        return False
 
     payload = {
         "username": username,
@@ -298,20 +306,25 @@ def save_message(username, role, content):
         "content": content
     }
 
-    return supabase_request(
+    result = supabase_request(
         "chat_messages",
         "POST",
         json_data=payload
     )
 
+    return bool(result)
+
 
 # =========================================================
-# 11. حذف المحادثة يدويًا
+# DELETE CHAT
 # =========================================================
 
 def delete_chat_history(username):
 
-    return supabase_request(
+    if not username:
+        return False
+
+    result = supabase_request(
         "chat_messages",
         "DELETE",
         params={
@@ -319,70 +332,151 @@ def delete_chat_history(username):
         }
     )
 
+    return True
+
 
 # =========================================================
-# 12. Gemini Streaming
+# GEMINI STREAMING
 # =========================================================
 
-def generate_ai_stream(user_message):
+def generate_ai_stream(
+    user_message,
+    previous_messages
+):
 
     if client is None:
 
+        error = st.session_state.get(
+            "gemini_init_error",
+            "Gemini client لم يتم تهيئته."
+        )
+
         yield (
-            "⚠️ محرك الذكاء الاصطناعي غير متصل حاليًا."
+            f"⚠️ تعذر تشغيل Gemini.\n\n"
+            f"`{error}`"
         )
 
         return
 
     try:
 
-        stream = client.models.generate_content_stream(
+        contents = []
 
-            model=GEMINI_MODEL,
+        # إرسال آخر 6 رسائل فقط لتقليل زمن الطلب
+        recent_messages = previous_messages[-6:]
 
-            contents=user_message,
+        for message in recent_messages:
 
-            config=types.GenerateContentConfig(
+            role = message.get("role")
 
-                system_instruction="""
-أنت المساعد الذكي الرسمي لمنصة Smart AI.
+            content = message.get(
+                "content",
+                ""
+            )
 
-القواعد:
+            if not content:
+                continue
 
-- أجب بلغة المستخدم.
-- كن سريعًا ومباشرًا.
-- أعطِ إجابات مفيدة وواضحة.
-- لا تكرر السؤال.
-- لا تخترع معلومات.
-- إذا لم تعرف شيئًا قل ذلك بوضوح.
-- استخدم تنسيقًا سهل القراءة.
-""",
+            gemini_role = (
+                "user"
+                if role == "user"
+                else "model"
+            )
 
-                max_output_tokens=500
+            contents.append(
+                types.Content(
+                    role=gemini_role,
+                    parts=[
+                        types.Part(
+                            text=content
+                        )
+                    ]
+                )
+            )
+
+        # السؤال الحالي
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part(
+                        text=user_message
+                    )
+                ]
             )
         )
 
-        for chunk in stream:
+        response_stream = (
+            client.models.generate_content_stream(
+                model=GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction="""
+أنت المساعد الذكي الرسمي لمنصة Smart AI.
 
-            if chunk.text:
+أجب بلغة المستخدم.
 
-                yield chunk.text
+كن سريعًا ومباشرًا.
+
+أعطِ معلومات مفيدة وواضحة.
+
+لا تكرر السؤال.
+
+لا تخترع معلومات.
+
+إذا لم تعرف الإجابة قل ذلك بوضوح.
+
+استخدم تنسيقًا سهل القراءة.
+
+اجعل الإجابات مختصرة ما لم يطلب المستخدم التفصيل.
+""",
+                    max_output_tokens=500
+                )
+            )
+        )
+
+        got_text = False
+
+        for chunk in response_stream:
+
+            try:
+
+                text = chunk.text
+
+            except Exception:
+
+                text = None
+
+            if text:
+
+                got_text = True
+
+                yield text
+
+        if not got_text:
+
+            yield (
+                "⚠️ Gemini لم يرجع نصًا في هذه المحاولة."
+            )
 
     except Exception as e:
 
-    yield f"⚠️ خطأ Gemini الحقيقي: {type(e)._name_}: {e}"
+        yield (
+            "⚠️ حدث خطأ أثناء الاتصال بـ Gemini.\n\n"
+            f"**نوع الخطأ:** `{type(e).__name__}`\n\n"
+            f"**التفاصيل:** `{e}`"
         )
 
 
 # =========================================================
-# 13. Stripe Checkout
+# STRIPE CHECKOUT
 # =========================================================
 
 def create_checkout_session(username):
 
-    if not stripe.api_key:
+    if not STRIPE_SECRET_KEY:
 
-        return None, "Stripe غير متصل."
+        return None, "STRIPE_SECRET_KEY غير موجود."
 
     if not STRIPE_PRICE_ID:
 
@@ -402,7 +496,7 @@ def create_checkout_session(username):
 
     if not users:
 
-        return None, "لم يتم العثور على الحساب."
+        return None, "الحساب غير موجود."
 
     user = users[0]
 
@@ -432,7 +526,7 @@ def create_checkout_session(username):
                 }
             )
 
-        session = stripe.checkout.Session.create(
+        checkout = stripe.checkout.Session.create(
 
             mode="subscription",
 
@@ -458,7 +552,7 @@ def create_checkout_session(username):
             }
         )
 
-        return session.url, None
+        return checkout.url, None
 
     except Exception as e:
 
@@ -466,28 +560,13 @@ def create_checkout_session(username):
 
 
 # =========================================================
-# 14. تسجيل الخروج
+# LOGIN
 # =========================================================
 
-def logout():
-
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-
-    # مهم:
-    # لا نحذف messages من Supabase.
-    # فقط نفرغ الذاكرة المؤقتة للجلسة الحالية.
-
-    st.session_state.messages = []
-
-    st.session_state.page = "chat"
-
-
-# =========================================================
-# 15. تسجيل الدخول
-# =========================================================
-
-def login_user(username, password):
+def login_user(
+    username,
+    password
+):
 
     users = supabase_request(
         "users_subscriptions",
@@ -510,7 +589,7 @@ def login_user(username, password):
 
     authenticated = False
 
-    # الحسابات الجديدة المشفرة
+    # الحسابات الجديدة
     if ":" in stored_password:
 
         authenticated = verify_password(
@@ -521,14 +600,14 @@ def login_user(username, password):
     # الحسابات القديمة
     else:
 
-        if secrets.compare_digest(
+        authenticated = secrets.compare_digest(
             password,
             stored_password
-        ):
+        )
 
-            authenticated = True
+        # ترقية كلمة المرور القديمة
+        if authenticated:
 
-            # ترقية كلمة المرور تلقائيًا
             supabase_request(
                 "users_subscriptions",
                 "PATCH",
@@ -559,7 +638,23 @@ def login_user(username, password):
 
 
 # =========================================================
-# 16. Sidebar
+# LOGOUT
+# =========================================================
+
+def logout():
+
+    st.session_state.logged_in = False
+
+    st.session_state.username = ""
+
+    # لا نحذف المحادثات من Supabase
+    st.session_state.messages = []
+
+    st.session_state.page = "chat"
+
+
+# =========================================================
+# SIDEBAR
 # =========================================================
 
 with st.sidebar:
@@ -632,12 +727,12 @@ with st.sidebar:
     else:
 
         st.info(
-            "🔒 سجل الدخول للوصول إلى المنصة."
+            "🔒 يرجى تسجيل الدخول."
         )
 
 
 # =========================================================
-# 17. شاشة Login
+# LOGIN / REGISTER
 # =========================================================
 
 if not st.session_state.logged_in:
@@ -648,11 +743,11 @@ if not st.session_state.logged_in:
     )
 
     st.title(
-        "🤖 Smart AI Platform"
+        "🤖 Smart AI"
     )
 
     st.write(
-        "منصة ذكية للمحادثة وحلول الذكاء الاصطناعي."
+        "منصة ذكاء اصطناعي متقدمة وسريعة."
     )
 
     login_tab, register_tab = st.tabs(
@@ -662,30 +757,30 @@ if not st.session_state.logged_in:
         ]
     )
 
-    # -----------------------------------------------------
-    # Login
-    # -----------------------------------------------------
+    # =====================================================
+    # LOGIN TAB
+    # =====================================================
 
     with login_tab:
 
         username = st.text_input(
-            "اسم المستخدم",
+            "👤 اسم المستخدم",
             key="login_username"
         ).strip()
 
         password = st.text_input(
-            "كلمة المرور",
+            "🔒 كلمة المرور",
             type="password",
             key="login_password"
         )
 
         if st.button(
-            "🚀 دخول",
+            "🚀 تسجيل الدخول",
             type="primary",
             use_container_width=True
         ):
 
-            # Admin
+            # ADMIN
             if (
                 username == "admin"
                 and ADMIN_PASSWORD
@@ -705,6 +800,7 @@ if not st.session_state.logged_in:
 
                 st.rerun()
 
+            # USER
             elif login_user(
                 username,
                 password
@@ -718,19 +814,19 @@ if not st.session_state.logged_in:
                     "❌ اسم المستخدم أو كلمة المرور غير صحيحة."
                 )
 
-    # -----------------------------------------------------
-    # Register
-    # -----------------------------------------------------
+    # =====================================================
+    # REGISTER TAB
+    # =====================================================
 
     with register_tab:
 
         new_username = st.text_input(
-            "اسم المستخدم الجديد",
+            "👤 اسم المستخدم الجديد",
             key="register_username"
         ).strip()
 
         new_password = st.text_input(
-            "كلمة المرور الجديدة",
+            "🔒 كلمة المرور",
             type="password",
             key="register_password"
         )
@@ -741,16 +837,28 @@ if not st.session_state.logged_in:
             use_container_width=True
         ):
 
-            if not new_username or not new_password:
+            if not new_username:
 
                 st.warning(
-                    "يرجى إدخال جميع البيانات."
+                    "أدخل اسم المستخدم."
+                )
+
+            elif not new_password:
+
+                st.warning(
+                    "أدخل كلمة المرور."
                 )
 
             elif len(new_password) < 8:
 
                 st.warning(
-                    "كلمة المرور يجب أن تكون 8 أحرف على الأقل."
+                    "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل."
+                )
+
+            elif new_username.lower() == "admin":
+
+                st.error(
+                    "هذا الاسم محجوز للمسؤول."
                 )
 
             else:
@@ -823,8 +931,11 @@ if not st.session_state.logged_in:
                     if result:
 
                         st.success(
-                            "🎉 تم إنشاء الحساب بنجاح. "
-                            "يمكنك الآن تسجيل الدخول."
+                            "🎉 تم إنشاء الحساب بنجاح."
+                        )
+
+                        st.info(
+                            "اذهب إلى تسجيل الدخول."
                         )
 
                     else:
@@ -842,7 +953,7 @@ if not st.session_state.logged_in:
 
 
 # =========================================================
-# 18. Admin Dashboard
+# ADMIN DASHBOARD
 # =========================================================
 
 if (
@@ -851,7 +962,7 @@ if (
 ):
 
     st.title(
-        "📊 لوحة الإدارة"
+        "📊 لوحة تحكم المسؤول"
     )
 
     users = supabase_request(
@@ -865,21 +976,25 @@ if (
 
     total_users = len(users)
 
-    trial_users = len([
-        user
-        for user in users
-        if user.get(
-            "subscription_status"
-        ) == "trial"
-    ])
+    trial_users = len(
+        [
+            user
+            for user in users
+            if user.get(
+                "subscription_status"
+            ) == "trial"
+        ]
+    )
 
-    active_users = len([
-        user
-        for user in users
-        if user.get(
-            "subscription_status"
-        ) == "active"
-    ])
+    active_users = len(
+        [
+            user
+            for user in users
+            if user.get(
+                "subscription_status"
+            ) == "active"
+        ]
+    )
 
     col1, col2, col3 = st.columns(3)
 
@@ -917,14 +1032,14 @@ if (
     else:
 
         st.info(
-            "لا يوجد مستخدمون حتى الآن."
+            "لا يوجد مستخدمون."
         )
 
     st.stop()
 
 
 # =========================================================
-# 19. صفحة الاشتراك
+# SUBSCRIPTION
 # =========================================================
 
 if st.session_state.page == "subscription":
@@ -940,7 +1055,7 @@ if st.session_state.page == "subscription":
         <h2>⭐ الاشتراك الشهري</h2>
 
         <p>
-        احصل على وصول كامل إلى المساعد الذكي.
+        احصل على وصول كامل إلى منصة Smart AI.
         </p>
 
         <ul>
@@ -948,7 +1063,7 @@ if st.session_state.page == "subscription":
             <li>⚡ ردود سريعة Streaming</li>
             <li>🧠 ذاكرة وحفظ المحادثات</li>
             <li>👤 حساب شخصي</li>
-            <li>💳 اشتراك شهري آمن عبر Stripe</li>
+            <li>💳 اشتراك شهري عبر Stripe</li>
             <li>🆓 تجربة مجانية لمدة 7 أيام</li>
         </ul>
 
@@ -972,7 +1087,7 @@ if st.session_state.page == "subscription":
         if checkout_url:
 
             st.link_button(
-                "🔐 الانتقال إلى Stripe للدفع",
+                "🔐 الانتقال إلى Stripe",
                 checkout_url,
                 use_container_width=True
             )
@@ -980,14 +1095,14 @@ if st.session_state.page == "subscription":
         else:
 
             st.error(
-                f"تعذر إنشاء الدفع: {error}"
+                error
             )
 
     st.stop()
 
 
 # =========================================================
-# 20. المحادثة
+# CHAT
 # =========================================================
 
 st.markdown(
@@ -997,7 +1112,7 @@ st.markdown(
     <h1>🤖 المساعد الذكي</h1>
 
     <p>
-    اسألني أي شيء وسأساعدك بأفضل إجابة ممكنة.
+    اسأل المساعد الذكي واحصل على إجابة سريعة.
     </p>
 
     </div>
@@ -1007,7 +1122,7 @@ st.markdown(
 
 
 # =========================================================
-# 21. عرض المحادثة
+# SHOW HISTORY
 # =========================================================
 
 for message in st.session_state.messages:
@@ -1022,7 +1137,7 @@ for message in st.session_state.messages:
 
 
 # =========================================================
-# 22. استقبال سؤال جديد
+# CHAT INPUT
 # =========================================================
 
 user_input = st.chat_input(
@@ -1032,7 +1147,19 @@ user_input = st.chat_input(
 
 if user_input:
 
-    # حفظ سؤال المستخدم محليًا
+    # نسخة من التاريخ قبل إضافة السؤال الحالي
+    previous_messages = list(
+        st.session_state.messages
+    )
+
+    # عرض السؤال
+    with st.chat_message("user"):
+
+        st.markdown(
+            user_input
+        )
+
+    # حفظ السؤال محليًا
     st.session_state.messages.append(
         {
             "role": "user",
@@ -1047,18 +1174,13 @@ if user_input:
         user_input
     )
 
-    with st.chat_message("user"):
-
-        st.markdown(
-            user_input
-        )
-
     # توليد الرد
     with st.chat_message("assistant"):
 
         bot_response = st.write_stream(
             generate_ai_stream(
-                user_input
+                user_input,
+                previous_messages
             )
         )
 
