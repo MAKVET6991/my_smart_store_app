@@ -195,12 +195,12 @@ else:
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل المخزنة تاريخياً بالجلسة الحالية
+    # عرض الرسائل المخزنة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # حقل الإدخال الخطي الأصلي المستقر لاستقبال وطباعة الرد الفوري السريع
+    # حقل الإدخال الأصلي الثابت للردود السريعة الفورية
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
     
     if user_input:
@@ -208,5 +208,8 @@ else:
         with st.chat_message("user"):
             st.write(user_input)
         
-        # 🛠️ التعديل الجوهري الجذري: قراءة ومعالجة الملفات والمرفقات خطياً بدون جمل try/except فرعية مسببة للـ SyntaxError تماماً ومضمونة 100%
         gemini_inputs = [user_input]
+        if uploaded_file and uploaded_file.type.startswith("image/"):
+            try: gemini_inputs.append(Image.open(uploaded_file))
+            except: pass
+        if uploaded_file and uploaded_file.type == "text/plain":
