@@ -63,7 +63,7 @@ def logout_callback():
 # --- القائمة الجانبية (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
-# 🛠️ الفاصل الحاسم: حقل يدوي مباشر لوضع مفتاح الـ API لكسر كاش السيرفر الميت نهائياً وجلب الرد
+# حقل يدوي مباشر لوضع مفتاح الـ API لكسر كاش السيرفر الميت نهائياً وجلب الرد
 st.sidebar.subheader("🔑 تفعيل اتصال الذكاء الاصطناعي")
 user_gemini_key = st.sidebar.text_input("ضع مفتاح Gemini الجديد هنا لربطه فوراً:", type="password", help="انسخ المفتاح الذي يبدأ بـ AIzaSy وضعه هنا مباشرة لكسر كاش السيرفر").strip()
 
@@ -107,6 +107,14 @@ if st.session_state.logged_in:
                 st.rerun()
                 
     st.sidebar.markdown("---")
+    try:
+        audio_value = st.sidebar.audio_input("اضغط لتسجيل صوتك:")
+        if audio_value:
+            st.sidebar.success("🎤 تم التقاط الصوت بنجاح!")
+    except:
+        pass
+
+    st.sidebar.markdown("---")
     st.sidebar.button("🚪 تسجيل الخروج من الحساب", on_click=logout_callback, use_container_width=True, type="secondary")
 else:
     st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح الميزات.")
@@ -133,9 +141,11 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
+                # فك القائمة المسترجعة بدقة لمنع خطأ الـ AttributeError لجميع المستخدمين
                 user_dict = None
-                if isinstance(res, list) and len(res) > 0:
-                    user_dict = res
+                if isinstance(res, list):
+                    if len(res) > 0:
+                        user_dict = res[0]
                 elif isinstance(res, dict):
                     user_dict = res
                 
@@ -206,9 +216,3 @@ else:
     
     if user_input:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        st.chat_message("user").write(user_input)
-        
-        gemini_inputs = [user_input]
-        if uploaded_file and uploaded_file.type.startswith("image/"):
-            try: gemini_inputs.append(Image.open(uploaded_file))
-            except: pass
