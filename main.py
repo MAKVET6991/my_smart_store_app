@@ -5,14 +5,13 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
-# 1. إعدادات الهيكل والتصميم الأساسي لضمان ثبات الواجهة
+# 1. إعدادات الهيكل والتصميم الأساسي
 st.set_page_config(
     page_title="منصة المحادثة الاحترافية الذكية", 
     page_icon="🤖", 
     layout="wide"
 )
 
-# 2. تصميم احترافي آمن يضمن بروز الأزرار وحقول الإدخال
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -40,7 +39,7 @@ if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != ""
 else:
     gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets."
 
-# دالة الاستدعاء المضمونة من Supabase
+# دالة Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -62,7 +61,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
+# تهيئة وإعداد متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -139,7 +138,6 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # فك القائمة المسترجعة بدقة لمنع خطأ الـ AttributeError نهائياً لجميع المستخدمين
                 user_dict = None
                 if isinstance(res, list):
                     if len(res) > 0:
@@ -201,19 +199,19 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الخطي الآمن 100%
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل المخزنة
+    # عرض التاريخ المباشر للرسائل المخزنة مؤقتاً
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال لرسائل المحادثة
-    user_input = st.chat_input("💡 اكتب سؤالك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
-    
-    if user_input:
-        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
-        st.chat_message("user").write(user_input)
+    # 🛠️ معالجة الشات عبر نموذج حماية الإدخال الفوري الموصى به لثبات الردود ومنع الاختفاء العشوائي
+    with st.form("chat_form", clear_on_submit=True):
+        user_input = st.text_input("💡 اكتب سؤالك أو استفسارك هنا واضغط على زر الإرسال للحصول على الرد الفوري الحقيقي...", placeholder="اكتب هنا...")
+        submit_chat = st.form_submit_button("🚀 إرسال السؤال للمساعد الذكي", use_container_width=True)
         
-        gemini_inputs = [user_input]
+    if submit_chat and user_input.strip() != "":
+        # أرشفة رسالة العميل فورياً
+        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
