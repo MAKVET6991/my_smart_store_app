@@ -205,9 +205,6 @@ else:
             data_to_show = all_users_resp if isinstance(all_users_resp, list) and len(all_users_resp) > 0 else [{"username": "malek", "subscription_status": "trial", "days_left": 7}]
             st.dataframe(data_to_show, use_container_width=True)
             
-            st.subheader("💬 تقييمات وملاحظات عملائك")
-            st.info("💡 قسم التقييمات وجدول المشتركين جاهز ويعمل بكفاءة تامة.")
-            
         with admin_tab2:
             st.subheader(f"💬 غرفة محادثة المسؤول: {st.session_state.active_room}")
             uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل:", type=["png", "jpg", "jpeg", "txt"], key="admin_file")
@@ -221,3 +218,4 @@ else:
     # 👤 حساب المستخدم العادي (مثل حساب malik)
     else:
         st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
+        uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بتحليله:", type=["png", "jpg", "jpeg", "txt"], key="user_file")
