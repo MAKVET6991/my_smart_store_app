@@ -5,35 +5,29 @@ import stripe
 from datetime import datetime, timezone, timedelta
 from PIL import Image
 
+# 1. إعدادات الهيكل الأساسي وتثبيت واجهة المتصفح لمنع التعليق
 st.set_page_config(
     page_title="المنصة الذكية المتكاملة لحلول الذكاء الاصطناعي", 
     page_icon="👑", 
     layout="wide"
 )
 
+# 2. تصميم داخلي عصري واحترافي مستوحى من واجهات ChatGPT و Dashboards العالمية
 st.markdown("""
     <style>
     @import url('https://googleapis.com');
     html, body, [class*="css"] { font-family: 'Cairo', sans-serif; text-align: right; }
     h1, h2, h3 { font-weight: 700 !important; color: #4f46e5 !important; }
-    .card-box {
-        background-color: #ffffff;
-        padding: 24px;
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-        margin-bottom: 20px;
-        text-align: center;
-    }
-    .card-title { color: #64748b; font-size: 1rem; font-weight: bold; margin-bottom: 5px; }
-    .card-value { color: #4f46e5; font-size: 2.2rem; font-weight: bold; }
+    .metric-container { background-color: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; text-align: center; }
     .login-container { background-color: #f8fafc; padding: 40px; border-radius: 24px; border: 1px solid #cbd5e1; max-width: 550px; margin: 40px auto; }
     </style>
 """, unsafe_allow_html=True)
 
+# إعداد مفاتيح خدمات الدفع والقاعدة السحابية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 model = None
 
+# فحص وتأمين ربط مفتاح الذكاء الاصطناعي بشكل ذكي لتجنب الحظر الجغرافي
 gemini_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 if gemini_key != "":
     try:
@@ -42,6 +36,7 @@ if gemini_key != "":
     except:
         model = None
 
+# دالة الاستدعاء المضمونة من قاعدة بيانات Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
     if "SUPABASE_URL" not in st.secrets or "SUPABASE_KEY" not in st.secrets:
         return None
@@ -63,6 +58,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
+# دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الحظر الجغرافي وحفظ المبيعات
 def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     clean_p = prompt.strip().lower()
     if has_image:
@@ -180,14 +176,13 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
 else:
+    # 🛠️ معالجة مسطحة صريحة وعزل كامل للوحة المسؤول لمنع مشاكل الـ with col3 نهائياً
     if st.session_state.username == "admin":
         st.markdown("<h2>📊 لوحة تحكم وإدارة المسؤول العام (Admin Dashboard)</h2>", unsafe_allow_html=True)
-        st.write("مراقبة الاشتراكات، وحجم الإيرادات الفعلي من داخل قاعدة البيانات")
         db_users = supabase_request("users_subscriptions", "GET")
         total_count = len(db_users) if isinstance(db_users, list) else 5
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.markdown(f'<div class="card-box"><div class="card-title">👥 إجمالي الزوار والعملاء</div><div class="card-value">{total_count}</div></div>', unsafe_allow_html=True)
-        with col2:
-            st.markdown('<div class="card-box"><div class="card-title">💳 بوابة الدفع الحية</div><div class="card-value">Stripe</div></div>', unsafe_allow_html=True)
-        with col3:
+        
+        # عرض الإحصائيات الحيوية بشكل خطي ومحمي تماماً
+        st.markdown(f'<div class="metric-container">👥 إجمالي الزوار والعملاء: <b>{total_count}</b></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-container">💳 بوابة الدفع النشطة: <b>Stripe LIVE</b></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-container">📂 خادم قاعدة البيانات: <b>Supabase REST v1</b></div>', unsafe_allow_html=True)
