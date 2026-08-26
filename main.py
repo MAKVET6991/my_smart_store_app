@@ -104,33 +104,20 @@ STRIPE_SECRET_KEY = st.secrets.get(
     ""
 ).strip()
 
+STRIPE_PRICE_ID = st.secrets.get(
+    "STRIPE_PRICE_ID",
+    ""
+).strip()
+
 APP_URL = st.secrets.get(
     "APP_URL",
     ""
 ).strip().rstrip("/")
 
-ADMIN_USERNAME = st.secrets.get(
-    "ADMIN_USERNAME",
-    "Admin"
-).strip()
+ADMIN_USERNAME = "admin"
 
-ADMIN_PASSWORD_HASH = st.secrets.get(
-    "ADMIN_PASSWORD_HASH",
-    ""
-).strip()
-
-STRIPE_BASIC_PRICE_ID = st.secrets.get(
-    "STRIPE_BASIC_PRICE_ID",
-    ""
-).strip()
-
-STRIPE_PRO_PRICE_ID = st.secrets.get(
-    "STRIPE_PRO_PRICE_ID",
-    ""
-).strip()
-
-STRIPE_PREMIUM_PRICE_ID = st.secrets.get(
-    "STRIPE_PREMIUM_PRICE_ID",
+ADMIN_PASSWORD = st.secrets.get(
+    "ADMIN_PASSWORD",
     ""
 ).strip()
 
@@ -154,7 +141,7 @@ if GEMINI_API_KEY:
         client = None
 
 
-# استخدم نموذجًا شائعًا في Gemini API
+# استخدم الموديل المتاح لديك
 GEMINI_MODEL = "gemini-2.5-flash"
 
 
@@ -191,9 +178,7 @@ defaults = {
 
     "checkout_message": "",
 
-    "session_message_count": 0,
-
-    "login_error": ""
+    "session_message_count": 0
 
 }
 
@@ -229,10 +214,7 @@ def verify_password(
 
     try:
 
-        if not password or not stored_hash:
-            return False
-
-        salt, saved_hash = stored_hash.split(":", 1)
+        salt, saved_hash = stored_hash.split(":")
 
         calculated = hashlib.pbkdf2_hmac(
             "sha256",
@@ -275,47 +257,7 @@ def valid_username(username: str) -> bool:
 
 
 # =========================================================
-# 9. ADMIN CHECK
-# =========================================================
-
-def is_admin_username(username: str) -> bool:
-
-    if not username:
-        return False
-
-    configured_admin = (
-        ADMIN_USERNAME.strip().lower()
-    )
-
-    entered_username = (
-        username.strip().lower()
-    )
-
-    return (
-        entered_username
-        == configured_admin
-    )
-
-
-def verify_admin(
-    username: str,
-    password: str
-) -> bool:
-
-    if not is_admin_username(username):
-        return False
-
-    if not ADMIN_PASSWORD_HASH:
-        return False
-
-    return verify_password(
-        password,
-        ADMIN_PASSWORD_HASH
-    )
-
-
-# =========================================================
-# 10. SUPABASE REQUEST
+# 9. SUPABASE REQUEST
 # =========================================================
 
 def supabase_request(
@@ -401,13 +343,10 @@ def supabase_request(
 
 
 # =========================================================
-# 11. GET USER
+# 10. GET USER
 # =========================================================
 
 def get_user(username):
-
-    if not username:
-        return None
 
     users = supabase_request(
         "users_subscriptions",
@@ -418,10 +357,7 @@ def get_user(username):
         }
     )
 
-    if users and isinstance(
-        users,
-        list
-    ):
+    if users and isinstance(users, list):
 
         return users[0]
 
@@ -429,13 +365,28 @@ def get_user(username):
 
 
 # =========================================================
+# 11. GET ALL USERS
+# =========================================================
+
+def get_all_users():
+
+    users = supabase_request(
+        "users_subscriptions",
+        "GET"
+    )
+
+    if isinstance(users, list):
+
+        return users
+
+    return []
+
+
+# =========================================================
 # 12. UPDATE USER
 # =========================================================
 
-def update_user(
-    username,
-    data
-):
+def update_user(username, data):
 
     return supabase_request(
         "users_subscriptions",
@@ -448,33 +399,13 @@ def update_user(
 
 
 # =========================================================
-# 13. GET ALL USERS
-# =========================================================
-
-def get_all_users():
-
-    users = supabase_request(
-        "users_subscriptions",
-        "GET"
-    )
-
-    if isinstance(
-        users,
-        list
-    ):
-
-        return users
-
-    return []
-
-
-# =========================================================
-# 14. TRIAL STATUS
+# 13. TRIAL STATUS
 # =========================================================
 
 def trial_is_active(user):
 
     if not user:
+
         return False
 
     status = user.get(
@@ -483,9 +414,11 @@ def trial_is_active(user):
     )
 
     if status == "active":
+
         return True
 
     if status != "trial":
+
         return False
 
     trial_end = user.get(
@@ -493,6 +426,7 @@ def trial_is_active(user):
     )
 
     if not trial_end:
+
         return False
 
     try:
@@ -515,12 +449,13 @@ def trial_is_active(user):
 
 
 # =========================================================
-# 15. ACCOUNT ACCESS
+# 14. ACCOUNT ACCESS
 # =========================================================
 
 def account_has_access(user):
 
     if not user:
+
         return False
 
     status = user.get(
@@ -529,21 +464,24 @@ def account_has_access(user):
     )
 
     if status == "active":
+
         return True
 
     if status == "trial":
+
         return trial_is_active(user)
 
     return False
 
 
 # =========================================================
-# 16. DAYS LEFT
+# 15. DAYS LEFT
 # =========================================================
 
 def days_left(user):
 
     if not user:
+
         return 0
 
     if user.get(
@@ -557,6 +495,7 @@ def days_left(user):
     )
 
     if not trial_end:
+
         return 0
 
     try:
@@ -588,15 +527,17 @@ def days_left(user):
 
 
 # =========================================================
-# 17. STRIPE CUSTOMER
+# 16. STRIPE CUSTOMER
 # =========================================================
 
 def ensure_stripe_customer(user):
 
     if not STRIPE_SECRET_KEY:
+
         return ""
 
     if not stripe.api_key:
+
         return ""
 
     existing_customer = user.get(
@@ -605,6 +546,7 @@ def ensure_stripe_customer(user):
     )
 
     if existing_customer:
+
         return existing_customer
 
     try:
@@ -641,12 +583,11 @@ def ensure_stripe_customer(user):
 
 
 # =========================================================
-# 18. STRIPE CHECKOUT
+# 17. STRIPE CHECKOUT
 # =========================================================
 
 def create_checkout_session(
-    username,
-    price_id
+    username
 ):
 
     if not STRIPE_SECRET_KEY:
@@ -655,10 +596,10 @@ def create_checkout_session(
             "Stripe غير مفعّل في Secrets."
         )
 
-    if not price_id:
+    if not STRIPE_PRICE_ID:
 
         return None, (
-            "لم يتم إعداد Price ID لهذه الخطة."
+            "STRIPE_PRICE_ID غير موجود."
         )
 
     if not APP_URL:
@@ -686,10 +627,12 @@ def create_checkout_session(
             mode="subscription",
 
             line_items=[
+
                 {
-                    "price": price_id,
+                    "price": STRIPE_PRICE_ID,
                     "quantity": 1
                 }
+
             ],
 
             customer=(
@@ -727,15 +670,16 @@ def create_checkout_session(
 
         return checkout.url, None
 
-    except Exception as e:
+    except Exception:
 
         return None, (
-            "تعذر إنشاء صفحة الدفع."
+            "تعذر إنشاء صفحة الدفع. "
+            "تحقق من إعداد Stripe."
         )
 
 
 # =========================================================
-# 19. VERIFY STRIPE CHECKOUT
+# 18. VERIFY STRIPE CHECKOUT
 # =========================================================
 
 def verify_checkout_session(
@@ -744,9 +688,11 @@ def verify_checkout_session(
 ):
 
     if not STRIPE_SECRET_KEY:
+
         return False
 
     if not session_id:
+
         return False
 
     try:
@@ -756,6 +702,7 @@ def verify_checkout_session(
         )
 
         if session.status != "complete":
+
             return False
 
         metadata_username = (
@@ -765,10 +712,8 @@ def verify_checkout_session(
             )
         )
 
-        if (
-            metadata_username.strip().lower()
-            != username.strip().lower()
-        ):
+        if metadata_username != username:
+
             return False
 
         customer_id = session.customer
@@ -792,17 +737,19 @@ def verify_checkout_session(
 
 
 # =========================================================
-# 20. SYNC STRIPE SUBSCRIPTION
+# 19. SYNC STRIPE SUBSCRIPTION
 # =========================================================
 
 def sync_subscription(username):
 
     if not STRIPE_SECRET_KEY:
+
         return False
 
     user = get_user(username)
 
     if not user:
+
         return False
 
     customer_id = user.get(
@@ -811,6 +758,7 @@ def sync_subscription(username):
     )
 
     if not customer_id:
+
         return False
 
     try:
@@ -823,16 +771,14 @@ def sync_subscription(username):
             )
         )
 
-        valid_statuses = [
-            "active",
-            "trialing"
-        ]
-
         active_subscription = None
 
         for subscription in subscriptions.data:
 
-            if subscription.status in valid_statuses:
+            if subscription.status in [
+                "active",
+                "trialing"
+            ]:
 
                 active_subscription = subscription
 
@@ -866,7 +812,7 @@ def sync_subscription(username):
 
 
 # =========================================================
-# 21. AI GENERATION
+# 20. AI GENERATION
 # =========================================================
 
 def generate_ai_stream(
@@ -876,7 +822,8 @@ def generate_ai_stream(
     if client is None:
 
         yield (
-            "⚠️ محرك الذكاء الاصطناعي غير متصل حاليًا."
+            "⚠️ محرك الذكاء الاصطناعي "
+            "غير متصل حاليًا."
         )
 
         return
@@ -963,6 +910,7 @@ def generate_ai_stream(
             )
 
             if text:
+
                 yield text
 
     except Exception:
@@ -975,7 +923,7 @@ def generate_ai_stream(
 
 
 # =========================================================
-# 22. LOGOUT
+# 21. LOGOUT
 # =========================================================
 
 def logout():
@@ -994,209 +942,7 @@ def logout():
 
 
 # =========================================================
-# 23. PAYMENT RETURN
-# =========================================================
-
-payment_status = st.query_params.get(
-    "payment"
-)
-
-session_id = st.query_params.get(
-    "session_id"
-)
-
-if (
-    payment_status == "success"
-    and session_id
-    and st.session_state.logged_in
-):
-
-    if verify_checkout_session(
-        session_id,
-        st.session_state.username
-    ):
-
-        st.session_state.checkout_message = (
-            "🎉 تم تأكيد الدفع وتفعيل اشتراكك بنجاح."
-        )
-
-        st.query_params.clear()
-
-    else:
-
-        st.session_state.checkout_message = (
-            "⚠️ لم يتم تأكيد الدفع."
-        )
-
-        st.query_params.clear()
-
-
-elif payment_status == "cancelled":
-
-    st.session_state.checkout_message = (
-        "تم إلغاء عملية الدفع."
-    )
-
-    st.query_params.clear()
-
-
-# =========================================================
-# 24. SIDEBAR
-# =========================================================
-
-with st.sidebar:
-
-    st.title("🤖 Smart AI")
-
-    if st.session_state.logged_in:
-
-        st.success(
-            f"👤 {st.session_state.username}"
-        )
-
-        user = get_user(
-            st.session_state.username
-        )
-
-        st.session_state.user_data = user
-
-        # -------------------------------------------------
-        # ACCOUNT STATUS
-        # -------------------------------------------------
-
-        if user:
-
-            status = user.get(
-                "subscription_status",
-                "unknown"
-            )
-
-            if status == "active":
-
-                st.success(
-                    "💳 الاشتراك: نشط"
-                )
-
-            elif status == "trial":
-
-                remaining = days_left(
-                    user
-                )
-
-                if remaining > 0:
-
-                    st.info(
-                        f"🎁 التجربة المجانية: "
-                        f"{remaining} يوم"
-                    )
-
-                else:
-
-                    st.error(
-                        "انتهت التجربة المجانية."
-                    )
-
-            else:
-
-                st.warning(
-                    "⚠️ لا يوجد اشتراك نشط."
-                )
-
-        # -------------------------------------------------
-        # CHAT
-        # -------------------------------------------------
-
-        if st.button(
-            "💬 المحادثة",
-            use_container_width=True
-        ):
-
-            st.session_state.page = "chat"
-
-            st.rerun()
-
-        # -------------------------------------------------
-        # PLANS
-        # -------------------------------------------------
-
-        if st.button(
-            "💳 الاشتراك والأسعار",
-            use_container_width=True
-        ):
-
-            st.session_state.page = "plans"
-
-            st.rerun()
-
-        # -------------------------------------------------
-        # ADMIN
-        # -------------------------------------------------
-
-        if is_admin_username(
-            st.session_state.username
-        ):
-
-            if st.button(
-                "📊 لوحة الإدارة",
-                use_container_width=True
-            ):
-
-                st.session_state.page = "admin"
-
-                st.rerun()
-
-        st.divider()
-
-        # -------------------------------------------------
-        # REFRESH
-        # -------------------------------------------------
-
-        if st.button(
-            "🔄 تحديث الاشتراك",
-            use_container_width=True
-        ):
-
-            sync_subscription(
-                st.session_state.username
-            )
-
-            st.rerun()
-
-        # -------------------------------------------------
-        # CLEAR CHAT
-        # -------------------------------------------------
-
-        if st.button(
-            "🗑️ مسح المحادثة",
-            use_container_width=True
-        ):
-
-            st.session_state.messages = []
-
-            st.rerun()
-
-        # -------------------------------------------------
-        # LOGOUT
-        # -------------------------------------------------
-
-        if st.button(
-            "🚪 تسجيل الخروج",
-            use_container_width=True
-        ):
-
-            logout()
-
-            st.rerun()
-
-    else:
-
-        st.info(
-            "🔒 قم بتسجيل الدخول للوصول إلى المنصة."
-        )
-
-
-# =========================================================
-# 25. LOGIN / REGISTER
+# 22. LOGIN / REGISTER
 # =========================================================
 
 if not st.session_state.logged_in:
@@ -1244,33 +990,35 @@ if not st.session_state.logged_in:
             use_container_width=True
         ):
 
-            # ------------------------------------------------
+            # ---------------------------------------------
             # ADMIN LOGIN
-            # ------------------------------------------------
+            # ---------------------------------------------
 
-            if verify_admin(
-                username,
-                password
+            if (
+                username.lower()
+                == ADMIN_USERNAME.lower()
+                and ADMIN_PASSWORD
+                and secrets.compare_digest(
+                    password,
+                    ADMIN_PASSWORD
+                )
             ):
 
                 st.session_state.logged_in = True
 
-                # نحفظ الاسم الموجود في Secrets
                 st.session_state.username = (
                     ADMIN_USERNAME
                 )
 
                 st.session_state.page = "admin"
 
-                st.session_state.login_error = ""
-
                 st.rerun()
 
-            else:
+            # ---------------------------------------------
+            # NORMAL USER LOGIN
+            # ---------------------------------------------
 
-                # ------------------------------------------------
-                # NORMAL USER LOGIN
-                # ------------------------------------------------
+            else:
 
                 user = get_user(
                     username
@@ -1290,17 +1038,12 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
 
                     st.session_state.username = (
-                        user.get(
-                            "username",
-                            username
-                        )
+                        username
                     )
 
                     st.session_state.user_data = user
 
                     st.session_state.page = "chat"
-
-                    st.session_state.login_error = ""
 
                     st.rerun()
 
@@ -1309,22 +1052,6 @@ if not st.session_state.logged_in:
                     st.error(
                         "❌ اسم المستخدم أو كلمة المرور غير صحيحة."
                     )
-
-                    # معلومات تشخيصية بدون كشف الأسرار
-                    if not SUPABASE_URL:
-                        st.warning(
-                            "⚠️ SUPABASE_URL غير موجود في Secrets."
-                        )
-
-                    if not SUPABASE_KEY:
-                        st.warning(
-                            "⚠️ SUPABASE_KEY غير موجود في Secrets."
-                        )
-
-                    if not ADMIN_PASSWORD_HASH:
-                        st.warning(
-                            "⚠️ ADMIN_PASSWORD_HASH غير موجود في Secrets."
-                        )
 
     # =====================================================
     # REGISTER
@@ -1365,14 +1092,6 @@ if not st.session_state.logged_in:
                     "على الإنجليزية والأرقام و _ . -"
                 )
 
-            elif is_admin_username(
-                new_username
-            ):
-
-                st.error(
-                    "هذا الاسم محجوز للمسؤول."
-                )
-
             elif len(new_password) < 8:
 
                 st.warning(
@@ -1384,6 +1103,15 @@ if not st.session_state.logged_in:
 
                 st.error(
                     "كلمتا المرور غير متطابقتين."
+                )
+
+            elif (
+                new_username.lower()
+                == ADMIN_USERNAME.lower()
+            ):
+
+                st.error(
+                    "اسم المستخدم admin محجوز."
                 )
 
             else:
@@ -1423,7 +1151,6 @@ if not st.session_state.logged_in:
 
                         "trial_end_date":
                             trial_end
-
                     }
 
                     result = supabase_request(
@@ -1435,15 +1162,20 @@ if not st.session_state.logged_in:
                     if result:
 
                         st.success(
-                            "🎉 تم إنشاء الحساب بنجاح. "
-                            "لديك تجربة مجانية لمدة 7 أيام."
+                            "🎉 تم إنشاء الحساب بنجاح."
+                        )
+
+                        st.info(
+                            "لديك تجربة مجانية لمدة 7 أيام. "
+                            "يمكنك الآن تسجيل الدخول."
                         )
 
                     else:
 
                         st.error(
                             "تعذر إنشاء الحساب. "
-                            "تحقق من اتصال Supabase."
+                            "تحقق من اتصال Supabase "
+                            "وإعدادات الجدول."
                         )
 
     st.markdown(
@@ -1455,25 +1187,103 @@ if not st.session_state.logged_in:
 
 
 # =========================================================
-# 26. REFRESH USER DATA
+# 23. SIDEBAR
 # =========================================================
 
-current_user = get_user(
-    st.session_state.username
-)
+with st.sidebar:
 
-st.session_state.user_data = current_user
+    st.title("🤖 Smart AI")
+
+    st.success(
+        f"👤 {st.session_state.username}"
+    )
+
+    # =====================================================
+    # ADMIN SIDEBAR
+    # =====================================================
+
+    if (
+        st.session_state.username
+        == ADMIN_USERNAME
+    ):
+
+        if st.button(
+            "📊 لوحة الإدارة",
+            use_container_width=True
+        ):
+
+            st.session_state.page = "admin"
+
+            st.rerun()
+
+    # =====================================================
+    # USER SIDEBAR
+    # =====================================================
+
+    if st.button(
+        "💬 المحادثة",
+        use_container_width=True
+    ):
+
+        st.session_state.page = "chat"
+
+        st.rerun()
+
+    if st.button(
+        "💳 الاشتراك والأسعار",
+        use_container_width=True
+    ):
+
+        st.session_state.page = "plans"
+
+        st.rerun()
+
+    st.divider()
+
+    if st.button(
+        "🔄 تحديث الاشتراك",
+        use_container_width=True
+    ):
+
+        if (
+            st.session_state.username
+            != ADMIN_USERNAME
+        ):
+
+            sync_subscription(
+                st.session_state.username
+            )
+
+        st.rerun()
+
+    if st.button(
+        "🗑️ مسح المحادثة",
+        use_container_width=True
+    ):
+
+        st.session_state.messages = []
+
+        st.rerun()
+
+    if st.button(
+        "🚪 تسجيل الخروج",
+        use_container_width=True
+    ):
+
+        logout()
+
+        st.rerun()
 
 
 # =========================================================
-# 27. ADMIN DASHBOARD
+# 24. ADMIN DASHBOARD
 # =========================================================
 
 if (
-    is_admin_username(
-        st.session_state.username
-    )
-    and st.session_state.page == "admin"
+    st.session_state.username
+    == ADMIN_USERNAME
+    and st.session_state.page
+    == "admin"
 ):
 
     st.title(
@@ -1481,7 +1291,7 @@ if (
     )
 
     st.write(
-        f"مرحبًا بك، **{ADMIN_USERNAME}** 👑"
+        "مرحبًا بك في لوحة إدارة Smart AI."
     )
 
     users = get_all_users()
@@ -1515,68 +1325,40 @@ if (
         if not account_has_access(u)
     ])
 
-    # -----------------------------------------------------
-    # METRICS
-    # -----------------------------------------------------
-
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>👥 المستخدمون</h3>
-                <h2>{total_users}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "👥 المستخدمون",
+            total_users
         )
 
     with col2:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>🟢 النشطون</h3>
-                <h2>{active_users}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "🟢 النشطون",
+            active_users
         )
 
     with col3:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>💳 مدفوعون</h3>
-                <h2>{paid_users}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "💳 مدفوعون",
+            paid_users
         )
 
     with col4:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>🎁 تجربة</h3>
-                <h2>{trial_users}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "🎁 تجربة",
+            trial_users
         )
 
     st.divider()
 
-    # -----------------------------------------------------
-    # USERS TABLE
-    # -----------------------------------------------------
-
     st.subheader(
-        "👥 المستخدمون"
+        "👥 المستخدمون المسجلون"
     )
 
     if users:
@@ -1624,40 +1406,25 @@ if (
     else:
 
         st.info(
-            "لا توجد مستخدمون حتى الآن."
+            "لا توجد حسابات مستخدمين."
         )
 
     st.divider()
 
     st.subheader(
-        "📈 معلومات الحسابات"
+        "📈 ملخص الحسابات"
     )
 
     st.write(
-        f"إجمالي الحسابات: **{total_users}**"
-    )
-
-    st.write(
-        f"الحسابات النشطة: **{active_users}**"
-    )
-
-    st.write(
-        f"الاشتراكات المدفوعة: **{paid_users}**"
-    )
-
-    st.write(
-        f"التجارب النشطة: **{trial_users}**"
-    )
-
-    st.write(
-        f"الحسابات المنتهية: **{expired_users}**"
+        f"عدد الحسابات التي لا تملك وصولًا حاليًا: "
+        f"**{expired_users}**"
     )
 
     st.stop()
 
 
 # =========================================================
-# 28. PLANS PAGE
+# 25. PLANS
 # =========================================================
 
 if st.session_state.page == "plans":
@@ -1667,22 +1434,59 @@ if st.session_state.page == "plans":
     )
 
     st.write(
-        "ابدأ بالتجربة المجانية ثم اختر الخطة المناسبة لك."
+        "ابدأ بالتجربة المجانية ثم اشترك للاستمرار."
     )
 
-    if st.session_state.checkout_message:
+    # =====================================================
+    # PAYMENT RETURN
+    # =====================================================
 
-        st.success(
-            st.session_state.checkout_message
+    payment_status = st.query_params.get(
+        "payment"
+    )
+
+    session_id = st.query_params.get(
+        "session_id"
+    )
+
+    if (
+        payment_status == "success"
+        and session_id
+    ):
+
+        if verify_checkout_session(
+            session_id,
+            st.session_state.username
+        ):
+
+            st.success(
+                "🎉 تم تأكيد الدفع "
+                "وتفعيل اشتراكك بنجاح."
+            )
+
+            st.session_state.checkout_message = ""
+
+        else:
+
+            st.warning(
+                "⚠️ لم يتم تأكيد الدفع."
+            )
+
+        st.query_params.clear()
+
+    elif payment_status == "cancelled":
+
+        st.info(
+            "تم إلغاء عملية الدفع."
         )
 
-        st.session_state.checkout_message = ""
+        st.query_params.clear()
+
+    # =====================================================
+    # PLAN
+    # =====================================================
 
     col1, col2, col3 = st.columns(3)
-
-    # =====================================================
-    # BASIC
-    # =====================================================
 
     with col1:
 
@@ -1699,8 +1503,8 @@ if st.session_state.page == "plans":
             <hr>
 
             <p>✓ مساعد AI</p>
-            <p>✓ محادثات يومية</p>
-            <p>✓ أولوية عادية</p>
+            <p>✓ محادثات ذكية</p>
+            <p>✓ استخدام يومي</p>
             <p>✓ دعم أساسي</p>
 
             </div>
@@ -1709,15 +1513,15 @@ if st.session_state.page == "plans":
         )
 
         if st.button(
-            "اشترك Basic",
-            use_container_width=True,
-            key="basic_plan"
+            "اشترك الآن",
+            key="basic",
+            type="primary",
+            use_container_width=True
         ):
 
             url, error = (
                 create_checkout_session(
-                    st.session_state.username,
-                    STRIPE_BASIC_PRICE_ID
+                    st.session_state.username
                 )
             )
 
@@ -1727,23 +1531,11 @@ if st.session_state.page == "plans":
 
             elif url:
 
-                st.markdown(
-                    f"""
-                    <meta
-                        http-equiv="refresh"
-                        content="0; url={url}"
-                    >
-                    """,
-                    unsafe_allow_html=True
+                st.link_button(
+                    "💳 الانتقال إلى الدفع",
+                    url,
+                    use_container_width=True
                 )
-
-                st.info(
-                    "جارٍ فتح صفحة الدفع..."
-                )
-
-    # =====================================================
-    # PRO
-    # =====================================================
 
     with col2:
 
@@ -1759,10 +1551,10 @@ if st.session_state.page == "plans":
 
             <hr>
 
-            <p>✓ كل مزايا Basic</p>
             <p>✓ استخدام أكبر</p>
             <p>✓ أولوية أعلى</p>
             <p>✓ مناسب للعمل</p>
+            <p>✓ دعم أفضل</p>
 
             </div>
             """,
@@ -1771,14 +1563,18 @@ if st.session_state.page == "plans":
 
         if st.button(
             "اشترك Pro",
-            use_container_width=True,
-            key="pro_plan"
+            key="pro",
+            use_container_width=True
         ):
+
+            st.info(
+                "حاليًا STRIPE_PRICE_ID واحد "
+                "مستخدم للدفع."
+            )
 
             url, error = (
                 create_checkout_session(
-                    st.session_state.username,
-                    STRIPE_PRO_PRICE_ID
+                    st.session_state.username
                 )
             )
 
@@ -1788,23 +1584,11 @@ if st.session_state.page == "plans":
 
             elif url:
 
-                st.markdown(
-                    f"""
-                    <meta
-                        http-equiv="refresh"
-                        content="0; url={url}"
-                    >
-                    """,
-                    unsafe_allow_html=True
+                st.link_button(
+                    "💳 الانتقال إلى الدفع",
+                    url,
+                    use_container_width=True
                 )
-
-                st.info(
-                    "جارٍ فتح صفحة الدفع..."
-                )
-
-    # =====================================================
-    # PREMIUM
-    # =====================================================
 
     with col3:
 
@@ -1820,10 +1604,10 @@ if st.session_state.page == "plans":
 
             <hr>
 
-            <p>✓ كل مزايا Pro</p>
             <p>✓ استخدام مكثف</p>
             <p>✓ أولوية قصوى</p>
             <p>✓ دعم مميز</p>
+            <p>✓ مناسب للأعمال</p>
 
             </div>
             """,
@@ -1832,14 +1616,18 @@ if st.session_state.page == "plans":
 
         if st.button(
             "اشترك Premium",
-            use_container_width=True,
-            key="premium_plan"
+            key="premium",
+            use_container_width=True
         ):
+
+            st.info(
+                "حاليًا STRIPE_PRICE_ID واحد "
+                "مستخدم للدفع."
+            )
 
             url, error = (
                 create_checkout_session(
-                    st.session_state.username,
-                    STRIPE_PREMIUM_PRICE_ID
+                    st.session_state.username
                 )
             )
 
@@ -1849,37 +1637,34 @@ if st.session_state.page == "plans":
 
             elif url:
 
-                st.markdown(
-                    f"""
-                    <meta
-                        http-equiv="refresh"
-                        content="0; url={url}"
-                    >
-                    """,
-                    unsafe_allow_html=True
+                st.link_button(
+                    "💳 الانتقال إلى الدفع",
+                    url,
+                    use_container_width=True
                 )
-
-                st.info(
-                    "جارٍ فتح صفحة الدفع..."
-                )
-
-    st.divider()
-
-    st.info(
-        "لإلغاء الاشتراك أو إدارة الدفع، "
-        "يمكن إضافة Customer Portal لاحقًا."
-    )
 
     st.stop()
 
 
 # =========================================================
-# 29. CHECK ACCOUNT ACCESS
+# 26. CURRENT USER
 # =========================================================
 
-# المسؤول لا يخضع لنظام الاشتراك
-if not is_admin_username(
+current_user = get_user(
     st.session_state.username
+)
+
+st.session_state.user_data = current_user
+
+
+# =========================================================
+# 27. ACCOUNT ACCESS
+# =========================================================
+
+# Admin لا يحتاج اشتراك
+if (
+    st.session_state.username
+    != ADMIN_USERNAME
 ):
 
     if not account_has_access(
@@ -1924,7 +1709,7 @@ if not is_admin_username(
 
 
 # =========================================================
-# 30. MAIN CHAT
+# 28. MAIN CHAT
 # =========================================================
 
 st.markdown(
@@ -1945,51 +1730,53 @@ st.markdown(
 
 
 # =========================================================
-# 31. ACCOUNT STATUS
+# 29. ACCOUNT STATUS
 # =========================================================
 
-status_col1, status_col2 = st.columns(2)
+if (
+    st.session_state.username
+    == ADMIN_USERNAME
+):
 
-with status_col1:
-
-    if is_admin_username(
-        st.session_state.username
-    ):
-
-        st.success(
-            "👑 حساب المسؤول"
-        )
-
-    elif current_user and current_user.get(
-        "subscription_status"
-    ) == "active":
-
-        st.success(
-            "💳 اشتراكك المدفوع نشط."
-        )
-
-    else:
-
-        remaining = days_left(
-            current_user
-        )
-
-        st.info(
-            f"🎁 أنت في التجربة المجانية. "
-            f"متبقي {remaining} يوم."
-        )
-
-
-with status_col2:
-
-    st.caption(
-        f"👤 الحساب: "
-        f"{st.session_state.username}"
+    st.success(
+        "👑 أنت المسؤول — لديك وصول كامل."
     )
 
+else:
+
+    status_col1, status_col2 = st.columns(2)
+
+    with status_col1:
+
+        if current_user.get(
+            "subscription_status"
+        ) == "active":
+
+            st.success(
+                "💳 اشتراكك المدفوع نشط."
+            )
+
+        else:
+
+            remaining = days_left(
+                current_user
+            )
+
+            st.info(
+                f"🎁 التجربة المجانية — "
+                f"متبقي {remaining} يوم."
+            )
+
+    with status_col2:
+
+        st.caption(
+            f"👤 الحساب: "
+            f"{st.session_state.username}"
+        )
+
 
 # =========================================================
-# 32. DISPLAY CHAT HISTORY
+# 30. DISPLAY CHAT HISTORY
 # =========================================================
 
 for message in (
@@ -2006,7 +1793,7 @@ for message in (
 
 
 # =========================================================
-# 33. CHAT INPUT
+# 31. CHAT INPUT
 # =========================================================
 
 user_input = st.chat_input(
@@ -2019,6 +1806,7 @@ if user_input:
     user_input = user_input.strip()
 
     if not user_input:
+
         st.stop()
 
     MAX_SESSION_MESSAGES = 100
@@ -2030,17 +1818,16 @@ if user_input:
 
         st.error(
             "⚠️ وصلت إلى الحد الأقصى "
-            "لهذه الجلسة. افتح جلسة جديدة "
-            "أو أعد تحميل الصفحة."
+            "لهذه الجلسة."
         )
 
         st.stop()
 
     st.session_state.session_message_count += 1
 
-    # -----------------------------------------------------
+    # =====================================================
     # USER MESSAGE
-    # -----------------------------------------------------
+    # =====================================================
 
     st.session_state.messages.append(
         {
@@ -2057,9 +1844,9 @@ if user_input:
             user_input
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # AI RESPONSE
-    # -----------------------------------------------------
+    # =====================================================
 
     with st.chat_message(
         "assistant"
@@ -2071,9 +1858,9 @@ if user_input:
             )
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # SAVE RESPONSE
-    # -----------------------------------------------------
+    # =====================================================
 
     st.session_state.messages.append(
         {
