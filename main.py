@@ -135,7 +135,7 @@ def render_chat_interface():
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
-    # حقل الإدخال لرسائل المحادثة
+    # pقل الإدخال لرسائل المحادثة
     user_input = st.chat_input("💡 اكتب سؤالك هنا واضغط Enter وسيجيبك المساعد فوراً وبثبات تام...", key="global_chat_input_box")
     
     if user_input:
@@ -202,6 +202,5 @@ if st.session_state.logged_in:
                 st.rerun()
                 
     st.sidebar.markdown("---")
-    try:
-        audio_value = st.sidebar.audio_input("🎙️ سجل رسالة صوتية (اختياري):")
-        ifaudio_value:
+    st.sidebar.button("🚪 تسجيل الخروج الآمن", on_click=perform_logout, use_container_width=True, type="secondary")
+else:
