@@ -12,30 +12,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تصميم مرن مضاد للون الأبيض يضمن بروز حقل المحادثة والأزرار تحت أي ثيم للمتصفح
+# 2. تصميم آمن ومستقر يدعم البروز التام لجميع العناصر
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
     p { text-align: center !important; color: #475569; }
-    
-    /* صناديق كروت الرسائل البارزة */
-    .msg-user-box { background-color: #e0e7ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #4f46e5; color: #1e1b4b; }
-    .msg-ai-box { background-color: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #10b981; color: #0f172a; }
-    
-    /* كروت لوحة التحكم الملونة لضمان البروز التام للادمن */
-    .dashboard-box { 
-        background-color: #f8fafc; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border: 2px solid #e2e8f0; 
-        text-align: center; 
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-    .dashboard-box h3 { color: #64748b !important; font-size: 1.1rem !important; margin: 0 !important; }
-    .dashboard-box h2 { color: #4f46e5 !important; font-size: 2.2rem !important; margin: 10px 0 0 0 !important; }
-    
-    /* صناديق تسجيل الدخول المريحة والعصرية */
+    .dashboard-box { background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; text-align: center; margin-bottom: 15px; }
     .login-box { background-color: #f1f5f9; padding: 30px; border-radius: 16px; border: 1px solid #cbd5e1; max-width: 500px; margin: 0 auto; }
     </style>
 """, unsafe_allow_html=True)
@@ -72,7 +54,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# تهيئة وإعداد متغيرات الجلسة (Session State) بشكل مستقر
+# تهيئة وإعداد متغيرات الجلسة (Session State)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -82,7 +64,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة والكاملة لجميع الميزات (Sidebar) ---
+# --- القائمة الجانبية المستقرة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -203,11 +185,31 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 ثانياً: واجهة شات المحادثة الذكية الموحدة والظاهرة للجميع (Admin + المستخدمين)
+    # 💬 ثانياً: واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع (Admin + المستخدمين)
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
-    
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # 🛠️ تم تصحيح وبناء مسافات الدوران (Indentation) هنا بدقة كاملة لإنهاء خطأ السطر 214 نهائياً
+    # 🛠️ الحل الخطي النهائي والمحمي: عرض الرسائل القديمة بنظام الفقاعات الأصلي المباشر لـ Streamlit لإنهاء أخطاء الإزاحة تماماً وبشكل حاسم
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
-        if msg["role"] == "user":
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            
+    user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
+    
+    if user_input:
+        with st.chat_message("user"):
+            st.write(user_input)
+        st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
+        
+        if model:
+            gemini_inputs = [user_input]
+            if uploaded_file and uploaded_file.type.startswith("image/"):
+                try:
+                    gemini_inputs.append(Image.open(uploaded_file))
+                except:
+                    pass
+            if uploaded_file and uploaded_file.type == "text/plain":
+                try:
+                    gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+                except:
+                    pass
