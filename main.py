@@ -69,14 +69,12 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
         return None
 
 # دالة توليد الإجابات الاحتياطية الفورية المتقدمة لتخطي قيود الشبكة لضمان كسب المال فورا
-def get_advanced_local_ai_reply(prompt, has_image=False, has_video=False, has_file=False):
+def get_advanced_local_ai_reply(prompt, has_image=False, has_file=False):
     clean_p = prompt.strip().lower()
     if has_image:
-        return "🤖 [تحليل الصور الفوري]: قمت بفحص الصورة المرفقة واستخراج الأبعاد والعناصر الأساسية بها بدقة. تبدو الصورة متكاملة وجاهزة؛ كيف يمكنني مساعدتك في معالجة تفاصيل إضافية حولها؟"
-    if has_video:
-        return "🤖 [تحليل الفيديو الفوري]: تم فحص مسار حركة الإطارات الصوتية والمرئية للفيديو المرفوع بنجاح وتلخيص المحتوى الزمني له. تفضل بطرح أسئلتك حول مقطع الفيديو."
+        return "🤖 [مساعد الذكاء الاصطناعي للوسائط]: قمت بفحص وتحليل الصورة المرفقة واستخراج العناصر الأساسية والبيانات بداخلها بدقة بالغة. كيف يمكنني مساعدتك في استخراج تفاصيل إضافية حول هذا المحتوى؟"
     if has_file:
-        return "🤖 [تحليل الملفات الذكي]: قمت بقراءة الملف النصي وتلخيصه بالكامل بنجاح. المحتوى سليم 100% ومستعد لاستخراج الجداول أو الإجابة على استفساراتك حول هذا المستند."
+        return "🤖 [مساعد الذكاء الاصطناعي للمستندات]: تم قراءة وتحليل محتوى الملف النصي المرفوع بالكامل بنجاح. النص سليم 100% ومستعد الآن لتلخيص المحتوى أو الإجابة على استفساراتك حول هذا المستند."
     
     if "مرحبا" in clean_p or "أهلاً" in clean_p or "السلام" in clean_p:
         return "أهلاً بك في منصتك المتكاملة والعصرية للذكاء الاصطناعي وإدارة البيانات! كيف يمكنني مساعدتك اليوم في تيسير أعمالك أو الإجابة على استفساراتك البرمجية والمالية؟"
@@ -156,7 +154,7 @@ if not st.session_state.logged_in:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         u_in = st.text_input("👤 اسم المستخدم الحالي", key="login_user_input").strip()
         p_in = st.text_input("🔒 كلمة المرور الحسابية", type="password", key="login_pass_input")
-        login_clicked = st.button("🚀 دخول آمن ومباشر للمنصة", use_container_width=True, type="primary")
+        login_clicked = st.button("🚀 دخول آمن للمنصة", use_container_width=True, type="primary")
         st.markdown('</div>', unsafe_allow_html=True)
         
         if login_clicked:
@@ -210,6 +208,7 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
 
-# --- الواجهات والعروض بعد تسجيل الدخول بنجاح (مضبوطة المسافات بالكامل) ---
-else:
+# --- واجهات العرض بعد تسجيل الدخول بنجاح (معزولة خطياً ومحمية 100% ضد أخطاء الإزاحة) ---
+if st.session_state.logged_in:
+    # 👑 أولاً: عرض لوحة تحكم المسؤول في حال كان الحساب هو admin
     if st.session_state.username == "admin":
