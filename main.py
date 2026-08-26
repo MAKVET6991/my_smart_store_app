@@ -167,7 +167,6 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{u_in}"})
                 
-                # فك وتأمين قائمة قاعدة البيانات بدقة تامة لمنع خطأ الـ AttributeError للأبد
                 u_dict = None
                 if isinstance(res, list) and len(res) > 0:
                     u_dict = res[0]
@@ -211,5 +210,6 @@ if not st.session_state.logged_in:
                 supabase_request("users_subscriptions", "POST", json_data=payload)
                 st.success("🎉 تم تفعيل الحساب وحفظه بنجاح! توجه لتبويب تسجيل الدخول للولوج المباشر.")
 
-# --- المعالجة والعرض بعد تسجيل الدخول بنجاح ---
+# --- الواجهات والعروض بعد تسجيل الدخول بنجاح (مضبوطة المسافات بالكامل) ---
 else:
+    if st.session_state.username == "admin":
