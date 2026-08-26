@@ -169,7 +169,7 @@ ADMIN_PASSWORD = get_secret(
 
 GEMINI_MODEL = get_secret(
     "GEMINI_MODEL",
-    "gemini-2.5-flash"
+    "gemini-3.6-flash"
 )
 
 gemini_clients = []
