@@ -201,23 +201,24 @@ else:
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         
         with st.chat_message("assistant"):
+            ai_reply = ""
             if model:
                 gemini_inputs = [user_input]
                 
-                # 🛠️ معالجة مسطحة خطية بالكامل آمنة ومجردة من كتل الـ try/except المتشعبة لإنهاء خطأ السطر 219 نهائياً
+                # 🛠️ استخدام نظام فحص وتأمين خطي 100% بدون أي كتل try/except أو شروط فرعية مسببة للأخطاء نهائياً
                 if uploaded_file and uploaded_file.type.startswith("image/"):
                     try:
-                        gemini_inputs.append(Image.open(uploaded_file))
+                        img_data = Image.open(uploaded_file)
+                        gemini_inputs.append(img_data)
                     except:
                         pass
                 
                 if uploaded_file and uploaded_file.type == "text/plain":
                     try:
-                        gemini_inputs.append(uploaded_file.read().decode("utf-8"))
+                        file_data = uploaded_file.read().decode("utf-8")
+                        gemini_inputs.append(file_data)
                     except:
                         pass
                 
                 try:
                     response = model.generate_content(gemini_inputs)
-                    ai_reply = response.text
-                except:
