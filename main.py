@@ -9,7 +9,7 @@ import secrets
 
 
 # =========================================================
-# PAGE
+# 1. إعداد الصفحة
 # =========================================================
 
 st.set_page_config(
@@ -20,7 +20,7 @@ st.set_page_config(
 
 
 # =========================================================
-# SECRETS
+# 2. قراءة Secrets
 # =========================================================
 
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "").strip()
@@ -29,28 +29,31 @@ SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "").strip()
 STRIPE_SECRET_KEY = st.secrets.get("STRIPE_SECRET_KEY", "").strip()
 STRIPE_PRICE_ID = st.secrets.get("STRIPE_PRICE_ID", "").strip()
 
-# أضف هذه لاحقًا إلى Secrets
 APP_URL = st.secrets.get("APP_URL", "").strip()
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "").strip()
 
 
 # =========================================================
-# GEMINI
+# 3. Gemini
 # =========================================================
 
 client = None
 
 if GEMINI_API_KEY:
+
     try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        client = genai.Client(
+            api_key=GEMINI_API_KEY
+        )
     except Exception:
         client = None
 
-GEMINI_MODEL = "gemini-3.7-flash"
+
+GEMINI_MODEL = "gemini-2.5-flash"
 
 
 # =========================================================
-# STRIPE
+# 4. Stripe
 # =========================================================
 
 if STRIPE_SECRET_KEY:
@@ -58,7 +61,7 @@ if STRIPE_SECRET_KEY:
 
 
 # =========================================================
-# UI
+# 5. التصميم
 # =========================================================
 
 st.markdown("""
@@ -110,7 +113,7 @@ h1, h2, h3 {
 
 
 # =========================================================
-# SESSION STATE
+# 6. Session State
 # =========================================================
 
 if "logged_in" not in st.session_state:
@@ -127,7 +130,7 @@ if "page" not in st.session_state:
 
 
 # =========================================================
-# PASSWORD FUNCTIONS
+# 7. تشفير كلمات المرور
 # =========================================================
 
 def hash_password(password):
@@ -163,11 +166,12 @@ def verify_password(password, stored_hash):
         )
 
     except Exception:
+
         return False
 
 
 # =========================================================
-# SUPABASE
+# 8. Supabase
 # =========================================================
 
 def supabase_request(
@@ -219,122 +223,197 @@ def supabase_request(
                 timeout=10
             )
 
+        elif method == "DELETE":
+
+            response = requests.delete(
+                url,
+                headers=headers,
+                params=params,
+                timeout=10
+            )
+
         else:
+
             return []
 
         response.raise_for_status()
 
-        return response.json()
+        if response.text:
+            return response.json()
+
+        return []
 
     except Exception:
+
         return []
 
 
 # =========================================================
-# AI
+# 9. تحميل المحادثات المحفوظة
+# =========================================================
+
+def load_chat_history(username):
+
+    result = supabase_request(
+        "chat_messages",
+        "GET",
+        params={
+            "username": f"eq.{username}",
+            "order": "created_at.asc"
+        }
+    )
+
+    if not isinstance(result, list):
+        return []
+
+    history = []
+
+    for message in result:
+
+        role = message.get("role")
+
+        if role not in ["user", "assistant"]:
+            continue
+
+        history.append({
+            "role": role,
+            "content": message.get(
+                "content",
+                ""
+            )
+        })
+
+    return history
+
+
+# =========================================================
+# 10. حفظ رسالة
+# =========================================================
+
+def save_message(username, role, content):
+
+    payload = {
+        "username": username,
+        "role": role,
+        "content": content
+    }
+
+    return supabase_request(
+        "chat_messages",
+        "POST",
+        json_data=payload
+    )
+
+
+# =========================================================
+# 11. حذف المحادثة يدويًا
+# =========================================================
+
+def delete_chat_history(username):
+
+    return supabase_request(
+        "chat_messages",
+        "DELETE",
+        params={
+            "username": f"eq.{username}"
+        }
+    )
+
+
+# =========================================================
+# 12. Gemini Streaming
 # =========================================================
 
 def generate_ai_stream(user_message):
 
     if client is None:
-        yield "⚠️ محرك الذكاء الاصطناعي غير متصل حاليًا."
+
+        yield (
+            "⚠️ محرك الذكاء الاصطناعي غير متصل حاليًا."
+        )
+
         return
-
-    recent_messages = st.session_state.messages[-12:]
-
-    transcript = []
-
-    for message in recent_messages:
-
-        if message["role"] == "user":
-            transcript.append(
-                f"العميل: {message['content']}"
-            )
-
-        elif message["role"] == "assistant":
-            transcript.append(
-                f"المساعد: {message['content']}"
-            )
-
-    transcript.append(
-        f"العميل: {user_message}"
-    )
-
-    prompt = "\n\n".join(transcript)
-
-    system_instruction = """
-أنت المساعد الذكي الرسمي لمنصة Smart AI.
-
-التعليمات:
-
-- أجب باللغة التي يستخدمها العميل.
-- كن سريعًا وواضحًا ومفيدًا.
-- لا تخترع معلومات.
-- لا تدّعي تنفيذ عملية لم تنفذها.
-- إذا لم تعرف الإجابة قل ذلك بوضوح.
-- استخدم العربية بطريقة طبيعية عندما يكون العميل عربيًا.
-- لا تكرر السؤال.
-- اجعل الإجابة سهلة القراءة.
-"""
 
     try:
 
         stream = client.models.generate_content_stream(
+
             model=GEMINI_MODEL,
-            contents=prompt,
+
+            contents=user_message,
+
             config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                thinking_config=types.ThinkingConfig(
-                    thinking_level="low"
-                ),
-                max_output_tokens=800
+
+                system_instruction="""
+أنت المساعد الذكي الرسمي لمنصة Smart AI.
+
+القواعد:
+
+- أجب بلغة المستخدم.
+- كن سريعًا ومباشرًا.
+- أعطِ إجابات مفيدة وواضحة.
+- لا تكرر السؤال.
+- لا تخترع معلومات.
+- إذا لم تعرف شيئًا قل ذلك بوضوح.
+- استخدم تنسيقًا سهل القراءة.
+""",
+
+                max_output_tokens=500
             )
         )
 
         for chunk in stream:
 
             if chunk.text:
+
                 yield chunk.text
 
     except Exception:
 
         yield (
-            "⚠️ حدث خطأ مؤقت أثناء الاتصال بالذكاء الاصطناعي. "
-            "يرجى المحاولة مرة أخرى."
+            "⚠️ حدث خطأ مؤقت أثناء الاتصال "
+            "بالذكاء الاصطناعي. حاول مرة أخرى."
         )
 
 
 # =========================================================
-# STRIPE CHECKOUT
+# 13. Stripe Checkout
 # =========================================================
 
 def create_checkout_session(username):
 
     if not stripe.api_key:
+
         return None, "Stripe غير متصل."
 
     if not STRIPE_PRICE_ID:
-        return None, "لم يتم إعداد STRIPE_PRICE_ID."
+
+        return None, "STRIPE_PRICE_ID غير موجود."
 
     if not APP_URL:
-        return None, "لم يتم إعداد APP_URL."
+
+        return None, "APP_URL غير موجود."
+
+    users = supabase_request(
+        "users_subscriptions",
+        "GET",
+        params={
+            "username": f"eq.{username}"
+        }
+    )
+
+    if not users:
+
+        return None, "لم يتم العثور على الحساب."
+
+    user = users[0]
+
+    customer_id = user.get(
+        "stripe_customer_id",
+        ""
+    )
 
     try:
-
-        users = supabase_request(
-            "users_subscriptions",
-            "GET",
-            params={
-                "username": f"eq.{username}"
-            }
-        )
-
-        user = users[0] if users else None
-
-        if not user:
-            return None, "لم يتم العثور على الحساب."
-
-        customer_id = user.get("stripe_customer_id", "")
 
         if not customer_id:
 
@@ -368,9 +447,13 @@ def create_checkout_session(username):
                 }
             ],
 
-            success_url=f"{APP_URL}?payment=success",
+            success_url=(
+                f"{APP_URL}?payment=success"
+            ),
 
-            cancel_url=f"{APP_URL}?payment=cancelled",
+            cancel_url=(
+                f"{APP_URL}?payment=cancelled"
+            ),
 
             metadata={
                 "username": username
@@ -385,19 +468,100 @@ def create_checkout_session(username):
 
 
 # =========================================================
-# LOGOUT
+# 14. تسجيل الخروج
 # =========================================================
 
 def logout():
 
     st.session_state.logged_in = False
     st.session_state.username = ""
+
+    # مهم:
+    # لا نحذف messages من Supabase.
+    # فقط نفرغ الذاكرة المؤقتة للجلسة الحالية.
+
     st.session_state.messages = []
+
     st.session_state.page = "chat"
 
 
 # =========================================================
-# SIDEBAR
+# 15. تسجيل الدخول
+# =========================================================
+
+def login_user(username, password):
+
+    users = supabase_request(
+        "users_subscriptions",
+        "GET",
+        params={
+            "username": f"eq.{username}"
+        }
+    )
+
+    if not users:
+
+        return False
+
+    user = users[0]
+
+    stored_password = user.get(
+        "password_hash",
+        ""
+    )
+
+    authenticated = False
+
+    # الحسابات الجديدة المشفرة
+    if ":" in stored_password:
+
+        authenticated = verify_password(
+            password,
+            stored_password
+        )
+
+    # الحسابات القديمة
+    else:
+
+        if secrets.compare_digest(
+            password,
+            stored_password
+        ):
+
+            authenticated = True
+
+            # ترقية كلمة المرور تلقائيًا
+            supabase_request(
+                "users_subscriptions",
+                "PATCH",
+                params={
+                    "username": f"eq.{username}"
+                },
+                json_data={
+                    "password_hash":
+                        hash_password(password)
+                }
+            )
+
+    if authenticated:
+
+        st.session_state.logged_in = True
+
+        st.session_state.username = username
+
+        st.session_state.messages = (
+            load_chat_history(username)
+        )
+
+        st.session_state.page = "chat"
+
+        return True
+
+    return False
+
+
+# =========================================================
+# 16. Sidebar
 # =========================================================
 
 with st.sidebar:
@@ -416,6 +580,7 @@ with st.sidebar:
         ):
 
             st.session_state.page = "chat"
+
             st.rerun()
 
         if st.session_state.username == "admin":
@@ -426,9 +591,8 @@ with st.sidebar:
             ):
 
                 st.session_state.page = "admin"
-                st.rerun()
 
-        st.divider()
+                st.rerun()
 
         if st.button(
             "💳 الاشتراك",
@@ -436,14 +600,26 @@ with st.sidebar:
         ):
 
             st.session_state.page = "subscription"
+
             st.rerun()
 
+        st.divider()
+
         if st.button(
-            "🗑️ مسح المحادثة",
+            "🗑️ حذف جميع المحادثات",
             use_container_width=True
         ):
 
+            delete_chat_history(
+                st.session_state.username
+            )
+
             st.session_state.messages = []
+
+            st.success(
+                "تم حذف المحادثات."
+            )
+
             st.rerun()
 
         if st.button(
@@ -452,6 +628,7 @@ with st.sidebar:
         ):
 
             logout()
+
             st.rerun()
 
     else:
@@ -462,7 +639,7 @@ with st.sidebar:
 
 
 # =========================================================
-# LOGIN / REGISTER
+# 17. شاشة Login
 # =========================================================
 
 if not st.session_state.logged_in:
@@ -472,7 +649,9 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True
     )
 
-    st.title("🤖 Smart AI Platform")
+    st.title(
+        "🤖 Smart AI Platform"
+    )
 
     st.write(
         "منصة ذكية للمحادثة وحلول الذكاء الاصطناعي."
@@ -485,7 +664,9 @@ if not st.session_state.logged_in:
         ]
     )
 
-    # LOGIN
+    # -----------------------------------------------------
+    # Login
+    # -----------------------------------------------------
 
     with login_tab:
 
@@ -517,76 +698,31 @@ if not st.session_state.logged_in:
             ):
 
                 st.session_state.logged_in = True
+
                 st.session_state.username = "admin"
+
+                st.session_state.messages = []
+
                 st.session_state.page = "admin"
 
                 st.rerun()
 
-            # Normal user
+            elif login_user(
+                username,
+                password
+            ):
 
-            users = supabase_request(
-                "users_subscriptions",
-                "GET",
-                params={
-                    "username": f"eq.{username}"
-                }
-            )
+                st.rerun()
 
-            user = users[0] if users else None
+            else:
 
-            if user:
-
-                stored_password = user.get(
-                    "password_hash",
-                    ""
+                st.error(
+                    "❌ اسم المستخدم أو كلمة المرور غير صحيحة."
                 )
 
-                authenticated = False
-
-                # الحسابات الجديدة
-                if ":" in stored_password:
-
-                    authenticated = verify_password(
-                        password,
-                        stored_password
-                    )
-
-                # الحسابات القديمة
-                else:
-
-                    if secrets.compare_digest(
-                        password,
-                        stored_password
-                    ):
-
-                        authenticated = True
-
-                        # ترقية كلمة المرور القديمة
-                        supabase_request(
-                            "users_subscriptions",
-                            "PATCH",
-                            params={
-                                "username": f"eq.{username}"
-                            },
-                            json_data={
-                                "password_hash":
-                                hash_password(password)
-                            }
-                        )
-
-                if authenticated:
-
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.session_state.page = "chat"
-
-                    st.rerun()
-
-            st.error(
-                "❌ اسم المستخدم أو كلمة المرور غير صحيحة."
-            )
-
-    # REGISTER
+    # -----------------------------------------------------
+    # Register
+    # -----------------------------------------------------
 
     with register_tab:
 
@@ -625,7 +761,8 @@ if not st.session_state.logged_in:
                     "users_subscriptions",
                     "GET",
                     params={
-                        "username": f"eq.{new_username}"
+                        "username":
+                            f"eq.{new_username}"
                     }
                 )
 
@@ -644,12 +781,14 @@ if not st.session_state.logged_in:
                         try:
 
                             customer = stripe.Customer.create(
-                                description=f"User: {new_username}"
+                                description=
+                                    f"User: {new_username}"
                             )
 
                             customer_id = customer.id
 
                         except Exception:
+
                             customer_id = ""
 
                     trial_end = (
@@ -658,12 +797,21 @@ if not st.session_state.logged_in:
                     ).isoformat()
 
                     payload = {
-                        "username": new_username,
+
+                        "username":
+                            new_username,
+
                         "password_hash":
-                            hash_password(new_password),
-                        "subscription_status": "trial",
+                            hash_password(
+                                new_password
+                            ),
+
+                        "subscription_status":
+                            "trial",
+
                         "stripe_customer_id":
                             customer_id,
+
                         "trial_end_date":
                             trial_end
                     }
@@ -677,7 +825,8 @@ if not st.session_state.logged_in:
                     if result:
 
                         st.success(
-                            "🎉 تم إنشاء الحساب بنجاح!"
+                            "🎉 تم إنشاء الحساب بنجاح. "
+                            "يمكنك الآن تسجيل الدخول."
                         )
 
                     else:
@@ -695,7 +844,7 @@ if not st.session_state.logged_in:
 
 
 # =========================================================
-# ADMIN
+# 18. Admin Dashboard
 # =========================================================
 
 if (
@@ -703,7 +852,9 @@ if (
     and st.session_state.page == "admin"
 ):
 
-    st.title("📊 لوحة الإدارة")
+    st.title(
+        "📊 لوحة الإدارة"
+    )
 
     users = supabase_request(
         "users_subscriptions",
@@ -711,56 +862,48 @@ if (
     )
 
     if not isinstance(users, list):
+
         users = []
 
     total_users = len(users)
 
-    trials = len([
-        user for user in users
-        if user.get("subscription_status") == "trial"
+    trial_users = len([
+        user
+        for user in users
+        if user.get(
+            "subscription_status"
+        ) == "trial"
     ])
 
-    paid = len([
-        user for user in users
-        if user.get("subscription_status") == "active"
+    active_users = len([
+        user
+        for user in users
+        if user.get(
+            "subscription_status"
+        ) == "active"
     ])
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>👥 المستخدمون</h3>
-                <h2>{total_users}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "👥 المستخدمون",
+            total_users
         )
 
     with col2:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>🆓 تجريبي</h3>
-                <h2>{trials}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "🆓 التجربة",
+            trial_users
         )
 
     with col3:
 
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <h3>💳 مدفوع</h3>
-                <h2>{paid}</h2>
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.metric(
+            "💳 المشتركين",
+            active_users
         )
 
     st.divider()
@@ -775,24 +918,28 @@ if (
 
     else:
 
-        st.info("لا يوجد مستخدمون حتى الآن.")
+        st.info(
+            "لا يوجد مستخدمون حتى الآن."
+        )
 
     st.stop()
 
 
 # =========================================================
-# SUBSCRIPTION
+# 19. صفحة الاشتراك
 # =========================================================
 
 if st.session_state.page == "subscription":
 
-    st.title("💳 الاشتراك الشهري")
+    st.title(
+        "💳 Smart AI Pro"
+    )
 
     st.markdown(
         """
         <div class="main-card">
 
-        <h2>⭐ Smart AI Pro</h2>
+        <h2>⭐ الاشتراك الشهري</h2>
 
         <p>
         احصل على وصول كامل إلى المساعد الذكي.
@@ -800,10 +947,11 @@ if st.session_state.page == "subscription":
 
         <ul>
             <li>🤖 ذكاء اصطناعي متقدم</li>
-            <li>⚡ ردود Streaming سريعة</li>
-            <li>🧠 ذاكرة للمحادثة</li>
-            <li>🔐 حساب شخصي</li>
+            <li>⚡ ردود سريعة Streaming</li>
+            <li>🧠 ذاكرة وحفظ المحادثات</li>
+            <li>👤 حساب شخصي</li>
             <li>💳 اشتراك شهري آمن عبر Stripe</li>
+            <li>🆓 تجربة مجانية لمدة 7 أيام</li>
         </ul>
 
         </div>
@@ -817,15 +965,13 @@ if st.session_state.page == "subscription":
         use_container_width=True
     ):
 
-        checkout_url, error = create_checkout_session(
-            st.session_state.username
+        checkout_url, error = (
+            create_checkout_session(
+                st.session_state.username
+            )
         )
 
         if checkout_url:
-
-            st.success(
-                "تم تجهيز صفحة الدفع الآمنة."
-            )
 
             st.link_button(
                 "🔐 الانتقال إلى Stripe للدفع",
@@ -836,14 +982,14 @@ if st.session_state.page == "subscription":
         else:
 
             st.error(
-                f"تعذر إنشاء عملية الدفع: {error}"
+                f"تعذر إنشاء الدفع: {error}"
             )
 
     st.stop()
 
 
 # =========================================================
-# CHAT
+# 20. المحادثة
 # =========================================================
 
 st.markdown(
@@ -862,7 +1008,9 @@ st.markdown(
 )
 
 
-# History
+# =========================================================
+# 21. عرض المحادثة
+# =========================================================
 
 for message in st.session_state.messages:
 
@@ -875,7 +1023,9 @@ for message in st.session_state.messages:
         )
 
 
-# Input
+# =========================================================
+# 22. استقبال سؤال جديد
+# =========================================================
 
 user_input = st.chat_input(
     "اكتب سؤالك هنا..."
@@ -884,6 +1034,7 @@ user_input = st.chat_input(
 
 if user_input:
 
+    # حفظ سؤال المستخدم محليًا
     st.session_state.messages.append(
         {
             "role": "user",
@@ -891,19 +1042,39 @@ if user_input:
         }
     )
 
+    # حفظ السؤال في Supabase
+    save_message(
+        st.session_state.username,
+        "user",
+        user_input
+    )
+
     with st.chat_message("user"):
 
-        st.markdown(user_input)
-
-    with st.chat_message("assistant"):
-
-        response = st.write_stream(
-            generate_ai_stream(user_input)
+        st.markdown(
+            user_input
         )
 
+    # توليد الرد
+    with st.chat_message("assistant"):
+
+        bot_response = st.write_stream(
+            generate_ai_stream(
+                user_input
+            )
+        )
+
+    # حفظ الرد محليًا
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": response
+            "content": bot_response
         }
+    )
+
+    # حفظ الرد في Supabase
+    save_message(
+        st.session_state.username,
+        "assistant",
+        bot_response
     )
