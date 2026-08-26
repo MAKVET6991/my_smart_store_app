@@ -25,12 +25,17 @@ st.markdown("""
 # إعداد مفاتيح الخدمات الخارجية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 model = None
-if "GEMINI_API_KEY" in st.secrets:
+gemini_init_error = None
+
+# فحص وتأمين قراءة مفتاح الذكاء الاصطناعي بدقة
+if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"].strip() != "":
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-3.6-flash")
-    except:
-        model = None
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"].strip())
+        model = genai.GenerativeModel("gemini-1.5-flash")
+    except Exception as e:
+        gemini_init_error = f"فشلت تهيئة مكتبة Google AI: {str(e)}"
+else:
+    gemini_init_error = "مفتاح الـ GEMINI_API_KEY غير موجود أو فارغ داخل إعدادات الـ Secrets في Streamlit Cloud."
 
 # دالة الاستدعاء المضمونة من Supabase
 def supabase_request(endpoint, method="GET", json_data=None, params=None):
@@ -64,7 +69,7 @@ if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
 if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
 
-# --- القائمة الجانبية المستقرة والكاملة لجميع الميزات (Sidebar) ---
+# --- القائمة الجانبية المستقرة والكاملة لجميع ميزات المنصة (Sidebar) ---
 st.sidebar.title("📁 لوحة التحكم والمنصة")
 
 if st.session_state.logged_in:
@@ -129,13 +134,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                
-                # 🛠️ معالجة خطية معززة تضمن تفكيك القائمة المسترجعة وتحويلها لقاموس لمنع الـ AttributeError نهائياً
-                user_data = None
-                if isinstance(res, list) and len(res) > 0:
-                    user_data = res[0]
-                elif isinstance(res, dict):
-                    user_data = res
+                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
@@ -176,7 +175,7 @@ if not st.session_state.logged_in:
 
 # --- واجهات العرض بعد تسجيل الدخول الموحدة خطياً ---
 else:
-    # 👑 أولاً: إذا كان الحساب المفتوح هو حساب المسؤول (Admin)، نعرض له جدول البيانات في الأعلى
+    # 👑 أولاً: لوحة مراقبة حساب المسؤول (Admin)
     if st.session_state.username == "admin":
         st.markdown("<h3>📊 لوحة مراقبة المشتركين والعمليات</h3>", unsafe_allow_html=True)
         all_users_resp = supabase_request("users_subscriptions", "GET")
@@ -192,15 +191,16 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 ثانياً: واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع (Admin + المستخدمين)
+    # 💬 ثانياً: واجهة شات المحادثة الذكية الموحدة
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل القديمة بنظام الفقاعات المستقر لـ Streamlit
+    # عرض الرسائل المخزنة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
+    # حقل الإدخال الأصلي الثابت
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...")
     
     if user_input:
@@ -208,10 +208,8 @@ else:
             st.write(user_input)
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         
-        if model:
-            gemini_inputs = [user_input]
-            if uploaded_file and uploaded_file.type.startswith("image/"):
-                try:
-                    gemini_inputs.append(Image.open(uploaded_file))
-                except:
-                    pass
+        with st.chat_message("assistant"):
+            if model:
+                # 🛠️ تم تصحيح حرف الـ st.spinner الصغير هنا بدقة ليعمل السيرفر بنجاح فوري
+                with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
+                    gemini_inputs = [user_input]
