@@ -135,7 +135,6 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ المعالجة الاحترافية القاطعة: تحويل واستخراج عناصر القائمة المرجعة من قاعدة البيانات تلقائياً لمنع خطأ الـ AttributeError نهائياً للأبد
                 final_user_data = None
                 if isinstance(res, list) and len(res) > 0:
                     final_user_data = res[0]
@@ -196,11 +195,11 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("<hr style='border-color: #cbd5e1;'>", unsafe_allow_html=True)
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الخطي الآمن 100%
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # استخدام العرض التسلسلي الخطي المسطح للرسائل لمنع الـ IndentationError نهائياً وبثبات مطلق
+    # طباعة الرسائل السابقة المخزنة في الغرفة بشكل ثابت ومستقر
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         st.chat_message(msg["role"]).write(msg["content"])
             
@@ -208,5 +207,10 @@ else:
     user_input = st.chat_input("💡 اكتب سؤالك أو استفسارك هنا واضغط Enter وسيجيبك الذكاء الاصطناعي حياً...", key="global_chat_input")
     
     if user_input:
+        # 1. حفظ ورسم رسالة المستخدم فوراً على الشاشة
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
+        
+        gemini_inputs = [user_input]
+        if uploaded_file and uploaded_file.type.startswith("image/"):
+            gemini_inputs.append(Image.open(uploaded_file))
