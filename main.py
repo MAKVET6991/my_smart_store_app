@@ -21,7 +21,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# إعداد مفاتيح خدمات Stripe الحقيقية النشطة
+# إعداد مفاتيح خدمات Stripe الحقيقية
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY", "")
 
 # دالة الاستدعاء المضمونة من Supabase
@@ -46,7 +46,7 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
     except:
         return None
 
-# 🛠️ محرك المعالجة الذكي المستقل لإنتاج الإجابات الفورية وتخطي الحظر الجغرافي بنجاح 100%
+# محرك المعالجة الذكي المستقل لإنتاج الإجابات الفورية وتخطي الحظر الجغرافي بنجاح
 def generate_stable_ai_response(prompt_text, user_has_file=False):
     clean_text = prompt_text.strip().lower()
     
@@ -94,6 +94,7 @@ if st.session_state.logged_in:
         if r_title and r_title not in st.session_state.chat_rooms:
             st.session_state.chat_rooms[r_title] = []
             st.session_state.active_room = r_title
+            st.rerun()
 
     for room in list(st.session_state.chat_rooms.keys()):
         if room == st.session_state.active_room:
@@ -101,6 +102,7 @@ if st.session_state.logged_in:
         else:
             if st.sidebar.button(f"📄 {room}", key=f"side_{room}", use_container_width=True):
                 st.session_state.active_room = room
+                st.rerun()
                 
     st.sidebar.markdown("---")
     try:
@@ -133,18 +135,21 @@ if not st.session_state.logged_in:
             if user_in == "admin" and pass_in == "admin123":
                 st.session_state.logged_in = True
                 st.session_state.username = "admin"
+                st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
+                # 🛠️ الإصلاح الجوهري الحاسم: استخراج العنصر الأول [0] من القائمة المرجعة بشكل صحيح
                 user_dict = None
                 if isinstance(res, list) and len(res) > 0:
-                    user_dict = res
+                    user_dict = res[0]
                 elif isinstance(res, dict):
                     user_dict = res
                 
                 if user_dict and user_dict.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
+                    st.rerun()
                 else:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة.")
                     
@@ -197,6 +202,3 @@ else:
 
     # 💬 واجهة شات الذكاء الاصطناعي الموحدة والظاهرة للجميع بالتنسيق المسطح الخطي الآمن 100%
     st.markdown(f"<h2>💬 الغرفة النشطة الحالية: {st.session_state.active_room}</h2>", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف نصي ليقوم الذكاء الاصطناعي بقراءته فوراً:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
-    
-    # عرض تاريخ الرسائل بثبات كامل من ذاكرة الغرفة النشطة لكي لا تختفي أبداً عند أي تحديث
