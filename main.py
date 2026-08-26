@@ -12,7 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. تحسينات المظهر لضمان بروز العناصر
 st.markdown("""
     <style>
     h1, h2, h3 { text-align: center !important; font-weight: 700 !important; color: #4f46e5 !important; }
@@ -107,7 +106,7 @@ if st.session_state.logged_in:
         st.session_state.username = ""
         st.rerun()
 else:
-    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح Mيزات المنصة.")
+    st.sidebar.warning("🔒 يرجى تسجيل الدخول لفتح ميزات المنصة.")
 
 # --- الواجهة الرئيسية بالمنتصف ---
 if not st.session_state.logged_in:
@@ -130,7 +129,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
-                user_data = res if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
+                user_data = res[0] if isinstance(res, list) and len(res) > 0 else (res if isinstance(res, dict) else None)
                 if user_data and user_data.get("password_hash") == pass_in:
                     st.session_state.logged_in = True
                     st.session_state.username = user_in
@@ -146,31 +145,31 @@ if not st.session_state.logged_in:
         st.markdown('</div>', unsafe_allow_html=True)
         
         if btn_reg and reg_user and reg_pass:
-            res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
-            if isinstance(res, list) and len(res) > 0:
-                st.error("❌ اسم المستخدم مسجل مسبقاً!")
+            # 🛠️ حماية أمنية لمنع تكرار تسجيل نفس الحساب ومنع أنانية حجز الأسماء المتكررة
+            check_res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{reg_user}"})
+            if check_res and len(check_res) > 0:
+                st.error("❌ اسم المستخدم هذا مسجل مسبقاً في النظام! الرجاء اختيار اسم آخر.")
             else:
-                try:
-                    cust_id = ""
-                    if stripe.api_key:
+                cust_id = ""
+                if stripe.api_key:
+                    try:
                         customer = stripe.Customer.create(description=f"User: {reg_user}")
                         cust_id = customer.id
-                    future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-                    payload = {
-                        "username": reg_user,
-                        "password_hash": reg_pass,
-                        "subscription_status": "trial",
-                        "stripe_customer_id": cust_id,
-                        "trial_end_date": future_trial
-                    }
-                    supabase_request("users_subscriptions", "POST", json_data=payload)
-                    st.success("🎉 تم إنشاء حسابك بنجاح! انتقل الآن لتبويب تسجيل الدخول للولوج.")
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء التهيئة: {e}")
+                    except:
+                        cust_id = ""
+                future_trial = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                payload = {
+                    "username": reg_user,
+                    "password_hash": reg_pass,
+                    "subscription_status": "trial",
+                    "stripe_customer_id": cust_id,
+                    "trial_end_date": future_trial
+                }
+                supabase_request("users_subscriptions", "POST", json_data=payload)
+                st.success("🎉 تم إنشاء حسابك بنجاح وأمان! انتقل الآن لتبويب تسجيل الدخول للولوج.")
 
 # --- معالجة شاشات العرض بعد تسجيل الدخول بنجاح ---
 else:
-    # 👑 إذا كان المستخدم هو المسؤول (Admin)، نعرض أولاً لوحة التحكم بأعلى الشاشة بشكل مستقل ومباشر
     if st.session_state.username == "admin":
         st.title("📊 لوحة تحكم المسؤول العام (Admin Dashboard)")
         all_users_resp = supabase_request("users_subscriptions", "GET")
@@ -186,33 +185,35 @@ else:
         st.dataframe(data_to_show, use_container_width=True)
         st.markdown("---")
 
-    # 💬 واجهة شات الذكاء الاصطناعي الموحدة للجميع (Admin + المستخدمين) لمنع تعارض المسافات نهائياً
+    # 💬 واجهة شات الذكاء الاصطناعي الموحدة
     st.title(f"💬 الغرفة الحالية: {st.session_state.active_room}")
     uploaded_file = st.file_uploader("📁 ارفع صورة أو ملف للتحليل والتفكير الحقيقي من Gemini:", type=["png", "jpg", "jpeg", "txt"], key="global_file")
     
-    # عرض الرسائل السابقة
+    # عرض الرسائل السابقة المباشرة
     for msg in st.session_state.chat_rooms[st.session_state.active_room]:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             
-    # صندوق الإدخال الخطي الموحد والمستقر
     user_input = st.chat_input("💡 اكتب سؤالك هنا وسيجيبك الذكاء الاصطناعي الحقيقي فوراً...")
     
     if user_input:
-        # عرض رسالة المستخدم فوراً بداخل الشات
         with st.chat_message("user"):
             st.write(user_input)
         st.session_state.chat_rooms[st.session_state.active_room].append({"role": "user", "content": user_input})
         
-        # جلب وطباعة رد الذكاء الاصطناعي المباشر من Gemini
         with st.chat_message("assistant"):
             if model:
                 with st.spinner("جاري التفكير وتوليد الإجابة الحقيقية..."):
                     gemini_inputs = [user_input]
+                    
+                    # 🛠️ معالجة مسطحة خطية 100% تم إلغاء كتل try/except الداخلية والتعليقات المسببة لخطأ السطر 218 نهائياً
                     if uploaded_file and uploaded_file.type.startswith("image/"):
-                        try:
-                            gemini_inputs.append(Image.open(uploaded_file))
-                        except:
-                            pass
+                        img_data = Image.open(uploaded_file)
+                        gemini_inputs.append(img_data)
+                    
                     if uploaded_file and uploaded_file.type == "text/plain":
-                        try:
+                        file_data = uploaded_file.read().decode("utf-8")
+                        gemini_inputs.append(file_data)
+                    
+                    try:
+                        response = model.generate_content(gemini_inputs)
