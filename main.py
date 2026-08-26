@@ -562,9 +562,10 @@ def ensure_stripe_customer(user):
 
         customer = stripe.Customer.create(
 
-            description=
-                f"Smart AI user: "
-                f"{user['username']",
+            description=(
+    f"Smart AI user: "
+    f"{user['username']}"
+),
 
             metadata={
                 "username":
