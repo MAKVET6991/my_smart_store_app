@@ -49,10 +49,8 @@ def supabase_request(endpoint, method="GET", json_data=None, params=None):
 # محرك المعالجة الذكي المستقل لإنتاج الإجابات الفورية وتخطي الحظر الجغرافي بنجاح
 def generate_stable_ai_response(prompt_text, user_has_file=False):
     clean_text = prompt_text.strip().lower()
-    
     if user_has_file:
         return "🤖 [مساعد الذكاء الاصطناعي]: قمت بقراءة وتحليل الملف المرفق بنجاح! محتواه متوافق تماماً مع سياق حديثك. كيف يمكنني مساعدتك في استخراج تفاصيل أخرى من هذا الملف؟"
-        
     if "مرحبا" in clean_text or "أهلاً" in clean_text or "السلام" in clean_text:
         return "أهلاً بك في منصتك الاحترافية للذكاء الاصطناعي! كيف يمكنني مساعدتك اليوم في إدارة أعمالك أو الإجابة على استفساراتك البرمجية والمالية؟"
     elif "سعر" in clean_text or "اشتراك" in clean_text or "باقة" in clean_text or "فلوس" in clean_text:
@@ -67,10 +65,14 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
-if "chat_rooms" not in st.session_state or not st.session_state.chat_rooms:
+if "chat_rooms" not in st.session_state:
     st.session_state.chat_rooms = {"المحادثة الرئيسية 🌟": []}
-if "active_room" not in st.session_state or st.session_state.active_room not in st.session_state.chat_rooms:
+if "active_room" not in st.session_state:
     st.session_state.active_room = "المحادثة الرئيسية 🌟"
+
+# تأمين وجود مصفوفة رسائل للغرفة النشطة دائماً لمنع الاختفاء
+if st.session_state.active_room not in st.session_state.chat_rooms:
+    st.session_state.chat_rooms[st.session_state.active_room] = []
 
 def logout_callback():
     st.session_state.logged_in = False
@@ -139,7 +141,7 @@ if not st.session_state.logged_in:
             else:
                 res = supabase_request("users_subscriptions", "GET", params={"username": f"eq.{user_in}"})
                 
-                # 🛠️ الإصلاح الجوهري الحاسم: استخراج العنصر الأول [0] من القائمة المرجعة بشكل صحيح
+                # فك القائمة بأمان تام لضمان نجاح الولوج لجميع المستخدمين
                 user_dict = None
                 if isinstance(res, list) and len(res) > 0:
                     user_dict = res[0]
