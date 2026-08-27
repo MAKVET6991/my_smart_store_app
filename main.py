@@ -86,8 +86,13 @@ h1, h2, h3 {
 # =========================================================
 
 def get_secret(name, default=""):
+
     try:
-        value = st.secrets.get(name, default)
+
+        value = st.secrets.get(
+            name,
+            default
+        )
 
         if value is None:
             return default
@@ -95,28 +100,42 @@ def get_secret(name, default=""):
         return str(value).strip()
 
     except Exception:
+
         return default
 
 
 def get_int_secret(name, default):
-    value = get_secret(name, str(default))
+
+    value = get_secret(
+        name,
+        str(default)
+    )
 
     try:
+
         return int(value)
+
     except Exception:
+
         return default
 
 
 # =========================================================
-# 4. GEMINI KEYS
+# 4. GEMINI API KEYS
 # =========================================================
 
 GEMINI_API_KEYS = []
+
+
+# ---------------------------------------------------------
+# Multiple keys
+# ---------------------------------------------------------
 
 multiple_keys = get_secret(
     "GEMINI_API_KEYS",
     ""
 )
+
 
 if multiple_keys:
 
@@ -126,6 +145,11 @@ if multiple_keys:
         if key.strip()
     ]
 
+
+# ---------------------------------------------------------
+# Single key
+# ---------------------------------------------------------
+
 else:
 
     single_key = get_secret(
@@ -134,7 +158,18 @@ else:
     )
 
     if single_key:
-        GEMINI_API_KEYS = [single_key]
+
+        GEMINI_API_KEYS = [
+            single_key
+        ]
+
+
+# Remove duplicates
+GEMINI_API_KEYS = list(
+    dict.fromkeys(
+        GEMINI_API_KEYS
+    )
+)
 
 
 # =========================================================
@@ -145,26 +180,32 @@ SUPABASE_URL = get_secret(
     "SUPABASE_URL"
 ).rstrip("/")
 
+
 SUPABASE_KEY = get_secret(
     "SUPABASE_KEY"
 )
+
 
 STRIPE_SECRET_KEY = get_secret(
     "STRIPE_SECRET_KEY"
 )
 
+
 STRIPE_PRICE_ID = get_secret(
     "STRIPE_PRICE_ID"
 )
+
 
 APP_URL = get_secret(
     "APP_URL"
 ).rstrip("/")
 
+
 ADMIN_USERNAME = get_secret(
     "ADMIN_USERNAME",
     "admin"
 )
+
 
 ADMIN_PASSWORD = get_secret(
     "ADMIN_PASSWORD"
@@ -175,15 +216,19 @@ ADMIN_PASSWORD = get_secret(
 # 6. AI SETTINGS
 # =========================================================
 
-GEMINI_MODEL = get_secret(
-    "GEMINI_MODEL",
-    "gemini-2.5-flash"
-)
+# =========================================================
+# IMPORTANT:
+# Gemini 3.6 Flash
+# =========================================================
+
+GEMINI_MODEL = "gemini-3.6-flash"
+
 
 AI_MAX_OUTPUT_TOKENS = get_int_secret(
     "AI_MAX_OUTPUT_TOKENS",
     4000
 )
+
 
 AI_CONTEXT_MESSAGES = get_int_secret(
     "AI_CONTEXT_MESSAGES",
@@ -197,7 +242,7 @@ AI_CONTEXT_MESSAGES = get_int_secret(
 # These limits apply ONLY to normal users.
 # Admin has unlimited upload size inside the application.
 #
-# 0 = no application limit.
+# 0 = unlimited
 # =========================================================
 
 USER_IMAGE_MAX_MB = get_int_secret(
@@ -205,15 +250,18 @@ USER_IMAGE_MAX_MB = get_int_secret(
     10
 )
 
+
 USER_VIDEO_MAX_MB = get_int_secret(
     "USER_VIDEO_MAX_MB",
     100
 )
 
+
 USER_AUDIO_MAX_MB = get_int_secret(
     "USER_AUDIO_MAX_MB",
     50
 )
+
 
 USER_DOCUMENT_MAX_MB = get_int_secret(
     "USER_DOCUMENT_MAX_MB",
@@ -226,16 +274,21 @@ USER_DOCUMENT_MAX_MB = get_int_secret(
 # =========================================================
 
 gemini_clients = []
+
+
 gemini_errors = []
+
 
 for api_key in GEMINI_API_KEYS:
 
     try:
 
+        client = genai.Client(
+            api_key=api_key
+        )
+
         gemini_clients.append(
-            genai.Client(
-                api_key=api_key
-            )
+            client
         )
 
     except Exception as e:
@@ -255,9 +308,15 @@ if not GEMINI_API_KEYS:
 
 else:
 
-    gemini_error = "; ".join(
-        gemini_errors
-    )
+    if gemini_errors:
+
+        gemini_error = "; ".join(
+            gemini_errors
+        )
+
+    else:
+
+        gemini_error = ""
 
 
 # =========================================================
@@ -267,8 +326,13 @@ else:
 if STRIPE_SECRET_KEY:
 
     try:
-        stripe.api_key = STRIPE_SECRET_KEY
+
+        stripe.api_key = (
+            STRIPE_SECRET_KEY
+        )
+
     except Exception:
+
         pass
 
 
@@ -277,19 +341,30 @@ if STRIPE_SECRET_KEY:
 # =========================================================
 
 defaults = {
+
     "logged_in": False,
+
     "username": "",
+
     "page": "chat",
+
     "messages": [],
+
     "user_data": None,
+
     "all_chats": [],
+
     "current_chat": 0,
+
     "gemini_index": 0
+
 }
+
 
 for key, value in defaults.items():
 
     if key not in st.session_state:
+
         st.session_state[key] = value
 
 
@@ -308,16 +383,23 @@ def hash_password(password):
         120000
     ).hex()
 
-    return f"{salt}:{password_hash}"
+    return (
+        f"{salt}:{password_hash}"
+    )
 
 
-def verify_password(password, stored_hash):
+def verify_password(
+    password,
+    stored_hash
+):
 
     try:
 
-        salt, saved_hash = stored_hash.split(
-            ":",
-            1
+        salt, saved_hash = (
+            stored_hash.split(
+                ":",
+                1
+            )
         )
 
         calculated = hashlib.pbkdf2_hmac(
@@ -337,9 +419,12 @@ def verify_password(password, stored_hash):
         return False
 
 
-def verify_admin_password(password):
+def verify_admin_password(
+    password
+):
 
     if not ADMIN_PASSWORD:
+
         return False
 
     return secrets.compare_digest(
@@ -382,12 +467,16 @@ def supabase_request(
     params=None
 ):
 
-    if not SUPABASE_URL or not SUPABASE_KEY:
+    if (
+        not SUPABASE_URL
+        or not SUPABASE_KEY
+    ):
 
         return (
             [],
             "Supabase Secrets غير مكتملة."
         )
+
 
     url = (
         SUPABASE_URL
@@ -395,12 +484,22 @@ def supabase_request(
         + endpoint
     )
 
+
     headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
+
+        "apikey":
+            SUPABASE_KEY,
+
+        "Authorization":
+            f"Bearer {SUPABASE_KEY}",
+
+        "Content-Type":
+            "application/json",
+
+        "Prefer":
+            "return=representation"
     }
+
 
     try:
 
@@ -439,13 +538,16 @@ def supabase_request(
                 "HTTP method غير مدعوم."
             )
 
+
         if not response.ok:
 
             return (
                 [],
-                f"Supabase HTTP {response.status_code}: "
+                f"Supabase HTTP "
+                f"{response.status_code}: "
                 f"{response.text[:1000]}"
             )
+
 
         if not response.text:
 
@@ -454,10 +556,12 @@ def supabase_request(
                 None
             )
 
+
         return (
             response.json(),
             None
         )
+
 
     except Exception as e:
 
@@ -477,35 +581,74 @@ def get_user(username):
         "users_subscriptions",
         "GET",
         params={
-            "username": f"eq.{username}",
-            "limit": "1"
+            "username":
+                f"eq.{username}",
+
+            "limit":
+                "1"
         }
     )
 
+
     if error:
-        return None, error
 
-    if isinstance(users, list) and users:
-        return users[0], None
+        return (
+            None,
+            error
+        )
 
-    return None, None
+
+    if (
+        isinstance(users, list)
+        and users
+    ):
+
+        return (
+            users[0],
+            None
+        )
 
 
-def create_user(username, password):
+    return (
+        None,
+        None
+    )
+
+
+def create_user(
+    username,
+    password
+):
 
     trial_end = (
-        datetime.now(timezone.utc)
+        datetime.now(
+            timezone.utc
+        )
         + timedelta(days=7)
     ).isoformat()
 
+
     payload = {
-        "username": username,
-        "password_hash": hash_password(password),
-        "subscription_status": "trial",
-        "stripe_customer_id": "",
-        "trial_end_date": trial_end,
-        "chat_history": []
+
+        "username":
+            username,
+
+        "password_hash":
+            hash_password(password),
+
+        "subscription_status":
+            "trial",
+
+        "stripe_customer_id":
+            "",
+
+        "trial_end_date":
+            trial_end,
+
+        "chat_history":
+            []
     }
+
 
     return supabase_request(
         "users_subscriptions",
@@ -514,14 +657,18 @@ def create_user(username, password):
     )
 
 
-def update_user(username, data):
+def update_user(
+    username,
+    data
+):
 
     return supabase_request(
         "users_subscriptions",
         "PATCH",
         json_data=data,
         params={
-            "username": f"eq.{username}"
+            "username":
+                f"eq.{username}"
         }
     )
 
@@ -530,44 +677,72 @@ def update_user(username, data):
 # 15. CHAT HISTORY
 # =========================================================
 
-def normalize_chat_history(history):
+def normalize_chat_history(
+    history
+):
 
-    if not isinstance(history, list):
+    if not isinstance(
+        history,
+        list
+    ):
+
         return []
+
 
     result = []
 
+
     for chat in history:
 
-        if not isinstance(chat, dict):
+        if not isinstance(
+            chat,
+            dict
+        ):
+
             continue
+
 
         messages = chat.get(
             "messages",
             []
         )
 
-        if not isinstance(messages, list):
+
+        if not isinstance(
+            messages,
+            list
+        ):
+
             messages = []
 
+
         result.append({
-            "title": str(
+
+            "title":
+                str(
+                    chat.get(
+                        "title",
+                        "محادثة جديدة"
+                    )
+                ),
+
+            "messages":
+                messages,
+
+            "updated_at":
                 chat.get(
-                    "title",
-                    "محادثة جديدة"
+                    "updated_at",
+                    ""
                 )
-            ),
-            "messages": messages,
-            "updated_at": chat.get(
-                "updated_at",
-                ""
-            )
         })
+
 
     return result
 
 
-def load_chat_history(user):
+def load_chat_history(
+    user
+):
 
     return normalize_chat_history(
         user.get(
@@ -577,12 +752,16 @@ def load_chat_history(user):
     )
 
 
-def save_chat_history(username, chats):
+def save_chat_history(
+    username,
+    chats
+):
 
     return update_user(
         username,
         {
-            "chat_history": chats
+            "chat_history":
+                chats
         }
     )
 
@@ -594,17 +773,34 @@ def create_new_chat():
         []
     )
 
+
     chats.append({
-        "title": "محادثة جديدة",
-        "messages": [],
-        "updated_at": datetime.now(
-            timezone.utc
-        ).isoformat()
+
+        "title":
+            "محادثة جديدة",
+
+        "messages":
+            [],
+
+        "updated_at":
+            datetime.now(
+                timezone.utc
+            ).isoformat()
     })
 
-    st.session_state.all_chats = chats
-    st.session_state.current_chat = len(chats) - 1
+
+    st.session_state.all_chats = (
+        chats
+    )
+
+
+    st.session_state.current_chat = (
+        len(chats) - 1
+    )
+
+
     st.session_state.messages = []
+
 
     save_chat_history(
         st.session_state.username,
@@ -619,29 +815,42 @@ def save_current_chat():
         []
     )
 
+
     index = st.session_state.get(
         "current_chat",
         0
     )
 
+
     if not chats:
 
         chats = [{
-            "title": "محادثة جديدة",
-            "messages": [],
-            "updated_at": datetime.now(
-                timezone.utc
-            ).isoformat()
+
+            "title":
+                "محادثة جديدة",
+
+            "messages":
+                [],
+
+            "updated_at":
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
         }]
+
 
         index = 0
 
+
     if index >= len(chats):
+
         index = len(chats) - 1
+
 
     chats[index]["messages"] = (
         st.session_state.messages
     )
+
 
     chats[index]["updated_at"] = (
         datetime.now(
@@ -649,15 +858,21 @@ def save_current_chat():
         ).isoformat()
     )
 
+
     if (
         chats[index]["title"]
         == "محادثة جديدة"
         and st.session_state.messages
     ):
 
-        for message in st.session_state.messages:
+        for message in (
+            st.session_state.messages
+        ):
 
-            if message.get("role") == "user":
+            if (
+                message.get("role")
+                == "user"
+            ):
 
                 text = message.get(
                     "content",
@@ -670,8 +885,16 @@ def save_current_chat():
 
                 break
 
-    st.session_state.all_chats = chats
-    st.session_state.current_chat = index
+
+    st.session_state.all_chats = (
+        chats
+    )
+
+
+    st.session_state.current_chat = (
+        index
+    )
+
 
     save_chat_history(
         st.session_state.username,
@@ -686,10 +909,19 @@ def open_chat(index):
         []
     )
 
-    if index < 0 or index >= len(chats):
+
+    if (
+        index < 0
+        or index >= len(chats)
+    ):
+
         return
 
-    st.session_state.current_chat = index
+
+    st.session_state.current_chat = (
+        index
+    )
+
 
     st.session_state.messages = (
         chats[index].get(
@@ -706,39 +938,68 @@ def delete_current_chat():
         []
     )
 
+
     if not chats:
+
         return
 
-    index = st.session_state.current_chat
 
-    if index < 0 or index >= len(chats):
+    index = (
+        st.session_state.current_chat
+    )
+
+
+    if (
+        index < 0
+        or index >= len(chats)
+    ):
+
         return
+
 
     chats.pop(index)
+
 
     if not chats:
 
         chats = [{
-            "title": "محادثة جديدة",
-            "messages": [],
-            "updated_at": datetime.now(
-                timezone.utc
-            ).isoformat()
+
+            "title":
+                "محادثة جديدة",
+
+            "messages":
+                [],
+
+            "updated_at":
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
         }]
+
 
     index = min(
         index,
         len(chats) - 1
     )
 
-    st.session_state.all_chats = chats
-    st.session_state.current_chat = index
+
+    st.session_state.all_chats = (
+        chats
+    )
+
+
+    st.session_state.current_chat = (
+        index
+    )
+
+
     st.session_state.messages = (
         chats[index].get(
             "messages",
             []
         )
     )
+
 
     save_chat_history(
         st.session_state.username,
@@ -753,24 +1014,34 @@ def delete_current_chat():
 def trial_is_active(user):
 
     if not user:
+
         return False
+
 
     status = user.get(
         "subscription_status"
     )
 
+
     if status == "active":
+
         return True
 
+
     if status != "trial":
+
         return False
+
 
     trial_end = user.get(
         "trial_end_date"
     )
 
+
     if not trial_end:
+
         return False
+
 
     try:
 
@@ -781,6 +1052,7 @@ def trial_is_active(user):
             )
         )
 
+
         return (
             datetime.now(
                 timezone.utc
@@ -788,15 +1060,20 @@ def trial_is_active(user):
             < end_date
         )
 
+
     except Exception:
 
         return False
 
 
-def account_has_access(user):
+def account_has_access(
+    user
+):
 
     if not user:
+
         return False
+
 
     return (
         user.get(
@@ -809,13 +1086,18 @@ def account_has_access(user):
 def days_left(user):
 
     if not user:
+
         return 0
 
-    if user.get(
-        "subscription_status"
-    ) == "active":
+
+    if (
+        user.get(
+            "subscription_status"
+        ) == "active"
+    ):
 
         return None
+
 
     try:
 
@@ -829,6 +1111,7 @@ def days_left(user):
             )
         )
 
+
         seconds = (
             end_date
             - datetime.now(
@@ -836,10 +1119,12 @@ def days_left(user):
             )
         ).total_seconds()
 
+
         return max(
             0,
             int(seconds / 86400)
         )
+
 
     except Exception:
 
@@ -850,30 +1135,43 @@ def days_left(user):
 # 17. STRIPE
 # =========================================================
 
-def ensure_stripe_customer(user):
+def ensure_stripe_customer(
+    user
+):
 
     if not STRIPE_SECRET_KEY:
+
         return ""
+
 
     existing = user.get(
         "stripe_customer_id",
         ""
     )
 
+
     if existing:
+
         return existing
+
 
     try:
 
-        customer = stripe.Customer.create(
-            description=(
-                "Smart AI user: "
-                + user["username"]
-            ),
-            metadata={
-                "username": user["username"]
-            }
+        customer = (
+            stripe.Customer.create(
+
+                description=(
+                    "Smart AI user: "
+                    + user["username"]
+                ),
+
+                metadata={
+                    "username":
+                        user["username"]
+                }
+            )
         )
+
 
         update_user(
             user["username"],
@@ -883,7 +1181,9 @@ def ensure_stripe_customer(user):
             }
         )
 
+
         return customer.id
+
 
     except Exception:
 
@@ -893,103 +1193,163 @@ def ensure_stripe_customer(user):
 def create_checkout():
 
     if not STRIPE_SECRET_KEY:
-        return None, "Stripe غير مفعّل."
+
+        return (
+            None,
+            "Stripe غير مفعّل."
+        )
+
 
     if not STRIPE_PRICE_ID:
-        return None, "STRIPE_PRICE_ID غير موجود."
+
+        return (
+            None,
+            "STRIPE_PRICE_ID غير موجود."
+        )
+
 
     if not APP_URL:
-        return None, "APP_URL غير موجود."
+
+        return (
+            None,
+            "APP_URL غير موجود."
+        )
+
 
     user, error = get_user(
         st.session_state.username
     )
 
+
     if error:
-        return None, error
+
+        return (
+            None,
+            error
+        )
+
 
     if not user:
-        return None, "لم يتم العثور على المستخدم."
 
-    customer_id = ensure_stripe_customer(
-        user
+        return (
+            None,
+            "لم يتم العثور على المستخدم."
+        )
+
+
+    customer_id = (
+        ensure_stripe_customer(
+            user
+        )
     )
+
 
     try:
 
-        checkout = stripe.checkout.Session.create(
+        checkout = (
+            stripe.checkout.Session.create(
 
-            mode="subscription",
+                mode="subscription",
 
-            line_items=[
-                {
-                    "price": STRIPE_PRICE_ID,
-                    "quantity": 1
-                }
-            ],
+                line_items=[
 
-            customer=(
-                customer_id
-                if customer_id
-                else None
-            ),
+                    {
+                        "price":
+                            STRIPE_PRICE_ID,
 
-            client_reference_id=(
-                st.session_state.username
-            ),
+                        "quantity":
+                            1
+                    }
+                ],
 
-            metadata={
-                "username":
+                customer=(
+                    customer_id
+                    if customer_id
+                    else None
+                ),
+
+                client_reference_id=(
                     st.session_state.username
-            },
+                ),
 
-            subscription_data={
-                "metadata": {
+                metadata={
+
                     "username":
                         st.session_state.username
-                }
-            },
+                },
 
-            success_url=(
-                f"{APP_URL}"
-                "?payment=success"
-                "&session_id="
-                "{CHECKOUT_SESSION_ID}"
-            ),
+                subscription_data={
 
-            cancel_url=(
-                f"{APP_URL}"
-                "?payment=cancelled"
+                    "metadata": {
+
+                        "username":
+                            st.session_state.username
+                    }
+                },
+
+                success_url=(
+                    f"{APP_URL}"
+                    "?payment=success"
+                    "&session_id="
+                    "{CHECKOUT_SESSION_ID}"
+                ),
+
+                cancel_url=(
+                    f"{APP_URL}"
+                    "?payment=cancelled"
+                )
             )
         )
 
-        return checkout.url, None
+
+        return (
+            checkout.url,
+            None
+        )
+
 
     except Exception as e:
 
-        return None, f"Stripe Error: {e}"
+        return (
+            None,
+            f"Stripe Error: {e}"
+        )
 
 
-def verify_payment(session_id):
+def verify_payment(
+    session_id
+):
 
     if not STRIPE_SECRET_KEY:
+
         return False
+
 
     try:
 
-        session = stripe.checkout.Session.retrieve(
-            session_id
+        session = (
+            stripe.checkout.Session.retrieve(
+                session_id
+            )
         )
 
+
         if session.status != "complete":
+
             return False
 
-        metadata = session.metadata or {}
+
+        metadata = (
+            session.metadata
+            or {}
+        )
+
 
         username = metadata.get(
             "username",
             ""
         )
+
 
         if not username:
 
@@ -998,19 +1358,28 @@ def verify_payment(session_id):
                 or ""
             )
 
+
         if not username:
+
             return False
+
 
         update_user(
             username,
             {
-                "subscription_status": "active",
+
+                "subscription_status":
+                    "active",
+
                 "stripe_customer_id":
-                    session.customer or ""
+                    session.customer
+                    or ""
             }
         )
 
+
         return True
+
 
     except Exception:
 
@@ -1042,23 +1411,64 @@ SYSTEM_INSTRUCTION = """
 
 
 # =========================================================
-# 19. GEMINI QUOTA
+# 19. GEMINI ERROR HANDLING
 # =========================================================
 
 def is_quota_error(error):
 
     text = str(error).lower()
 
+
     words = [
+
         "429",
+
         "quota",
+
         "resource_exhausted",
+
         "resource exhausted",
+
         "rate limit",
+
         "rate_limit",
+
         "too many requests",
+
         "exceeded"
     ]
+
+
+    return any(
+        word in text
+        for word in words
+    )
+
+
+def is_invalid_key_error(
+    error
+):
+
+    text = str(error).lower()
+
+
+    words = [
+
+        "api_key_invalid",
+
+        "api key not valid",
+
+        "api key is not valid",
+
+        "invalid api key",
+
+        "invalid_argument",
+
+        "unauthorized",
+
+        "401"
+    ]
+
 
     return any(
         word in text
@@ -1069,12 +1479,15 @@ def is_quota_error(error):
 def get_gemini_client():
 
     if not gemini_clients:
+
         return None
+
 
     index = (
         st.session_state.gemini_index
         % len(gemini_clients)
     )
+
 
     return gemini_clients[index]
 
@@ -1082,10 +1495,14 @@ def get_gemini_client():
 def rotate_gemini_key():
 
     if not gemini_clients:
+
         return
 
+
     st.session_state.gemini_index = (
-        st.session_state.gemini_index + 1
+
+        st.session_state.gemini_index
+        + 1
     ) % len(gemini_clients)
 
 
@@ -1093,7 +1510,9 @@ def rotate_gemini_key():
 # 20. CONVERSATION
 # =========================================================
 
-def build_conversation(user_message):
+def build_conversation(
+    user_message
+):
 
     recent = (
         st.session_state.messages[
@@ -1101,7 +1520,9 @@ def build_conversation(user_message):
         ]
     )
 
+
     conversation = []
+
 
     for message in recent:
 
@@ -1110,26 +1531,34 @@ def build_conversation(user_message):
             ""
         )
 
+
         content = message.get(
             "content",
             ""
         )
 
+
         if role == "user":
 
             conversation.append(
-                "المستخدم: " + content
+                "المستخدم: "
+                + content
             )
+
 
         elif role == "assistant":
 
             conversation.append(
-                "المساعد: " + content
+                "المساعد: "
+                + content
             )
 
+
     conversation.append(
-        "المستخدم: " + user_message
+        "المستخدم: "
+        + user_message
     )
+
 
     return "\n".join(
         conversation
@@ -1140,7 +1569,9 @@ def build_conversation(user_message):
 # 21. AI CHAT STREAM
 # =========================================================
 
-def generate_ai_stream(user_message):
+def generate_ai_stream(
+    user_message
+):
 
     if not gemini_clients:
 
@@ -1151,17 +1582,24 @@ def generate_ai_stream(user_message):
 
         return
 
+
     prompt = build_conversation(
         user_message
     )
+
 
     attempts = len(
         gemini_clients
     )
 
+
+    invalid_keys = 0
+
+
     for attempt in range(attempts):
 
         client = get_gemini_client()
+
 
         try:
 
@@ -1172,18 +1610,22 @@ def generate_ai_stream(user_message):
 
                     contents=prompt,
 
-                    config=types.GenerateContentConfig(
+                    config=(
+                        types.GenerateContentConfig(
 
-                        system_instruction=
-                            SYSTEM_INSTRUCTION,
+                            system_instruction=
+                                SYSTEM_INSTRUCTION,
 
-                        max_output_tokens=
-                            AI_MAX_OUTPUT_TOKENS
+                            max_output_tokens=
+                                AI_MAX_OUTPUT_TOKENS
+                        )
                     )
                 )
             )
 
+
             found = False
+
 
             for chunk in response:
 
@@ -1193,28 +1635,68 @@ def generate_ai_stream(user_message):
                     None
                 )
 
+
                 if text:
 
                     found = True
+
                     yield text
 
+
             if found:
+
                 return
 
-            yield "⚠️ لم يُرجع Gemini نصاً."
+
+            yield (
+                "⚠️ لم يُرجع Gemini نصاً."
+            )
+
             return
+
 
         except Exception as e:
 
-            if (
-                is_quota_error(e)
-                and attempt < attempts - 1
-            ):
+            # -------------------------------------------------
+            # Invalid API key
+            # -------------------------------------------------
 
-                rotate_gemini_key()
-                continue
+            if is_invalid_key_error(e):
+
+                invalid_keys += 1
+
+                if attempt < attempts - 1:
+
+                    rotate_gemini_key()
+
+                    continue
+
+
+                yield (
+                    "❌ مفاتيح Gemini الموجودة "
+                    "غير صالحة.\n\n"
+                    "تأكد من أن "
+                    "`GEMINI_API_KEY` "
+                    "في Streamlit Secrets "
+                    "يحتوي على مفتاح Google AI "
+                    "صالح."
+                )
+
+                return
+
+
+            # -------------------------------------------------
+            # Quota / Rate limit
+            # -------------------------------------------------
 
             if is_quota_error(e):
+
+                if attempt < attempts - 1:
+
+                    rotate_gemini_key()
+
+                    continue
+
 
                 yield (
                     "⚠️ **انتهت حصة Gemini "
@@ -1223,12 +1705,17 @@ def generate_ai_stream(user_message):
                     "`GEMINI_API_KEYS`."
                 )
 
-            else:
+                return
 
-                yield (
-                    "⚠️ حدث خطأ في Gemini.\n\n"
-                    f"`{str(e)}`"
-                )
+
+            # -------------------------------------------------
+            # Other errors
+            # -------------------------------------------------
+
+            yield (
+                "⚠️ حدث خطأ في Gemini.\n\n"
+                f"`{str(e)}`"
+            )
 
             return
 
@@ -1237,38 +1724,68 @@ def generate_ai_stream(user_message):
 # 22. FILE LIMITS
 # =========================================================
 
-def get_file_limit(uploaded_file):
+def get_file_limit(
+    uploaded_file
+):
 
-    mime = uploaded_file.type.lower()
+    mime = (
+        uploaded_file.type.lower()
+    )
 
-    if mime.startswith("image/"):
+
+    if mime.startswith(
+        "image/"
+    ):
+
         return USER_IMAGE_MAX_MB
 
-    if mime.startswith("video/"):
+
+    if mime.startswith(
+        "video/"
+    ):
+
         return USER_VIDEO_MAX_MB
 
-    if mime.startswith("audio/"):
+
+    if mime.startswith(
+        "audio/"
+    ):
+
         return USER_AUDIO_MAX_MB
+
 
     return USER_DOCUMENT_MAX_MB
 
 
-def check_file_size(uploaded_file):
+def check_file_size(
+    uploaded_file
+):
 
-    # ADMIN = unlimited
+    # ADMIN = UNLIMITED
     if (
         st.session_state.username
         == ADMIN_USERNAME
     ):
-        return True, None
+
+        return (
+            True,
+            None
+        )
+
 
     limit = get_file_limit(
         uploaded_file
     )
 
+
     # 0 = unlimited
     if limit <= 0:
-        return True, None
+
+        return (
+            True,
+            None
+        )
+
 
     size_mb = (
         uploaded_file.size
@@ -1276,16 +1793,24 @@ def check_file_size(uploaded_file):
         / 1024
     )
 
+
     if size_mb > limit:
 
         return (
+
             False,
-            f"حجم الملف {size_mb:.2f} MB "
+
+            f"حجم الملف "
+            f"{size_mb:.2f} MB "
             f"ويتجاوز الحد المسموح "
             f"{limit} MB."
         )
 
-    return True, None
+
+    return (
+        True,
+        None
+    )
 
 
 # =========================================================
@@ -1304,20 +1829,31 @@ def analyze_uploaded_file(
             + gemini_error
         )
 
-    allowed, error = check_file_size(
-        uploaded_file
+
+    allowed, error = (
+        check_file_size(
+            uploaded_file
+        )
     )
 
+
     if not allowed:
-        return "❌ " + error
+
+        return (
+            "❌ "
+            + error
+        )
+
 
     temp_path = None
+
 
     try:
 
         suffix = os.path.splitext(
             uploaded_file.name
         )[1]
+
 
         with tempfile.NamedTemporaryFile(
             delete=False,
@@ -1330,19 +1866,33 @@ def analyze_uploaded_file(
 
             temp_path = tmp.name
 
+
         attempts = len(
             gemini_clients
         )
 
-        for attempt in range(attempts):
 
-            client = get_gemini_client()
+        for attempt in range(
+            attempts
+        ):
+
+            client = (
+                get_gemini_client()
+            )
+
 
             try:
 
-                gemini_file = client.files.upload(
-                    file=temp_path
+                gemini_file = (
+                    client.files.upload(
+                        file=temp_path
+                    )
                 )
+
+
+                # ------------------------------------------------
+                # Wait for video/audio processing
+                # ------------------------------------------------
 
                 if uploaded_file.type.startswith(
                     (
@@ -1359,14 +1909,18 @@ def analyze_uploaded_file(
                             None
                         )
 
+
                         state_name = getattr(
                             state,
                             "name",
                             str(state)
                         )
 
+
                         if state_name == "ACTIVE":
+
                             break
+
 
                         if state_name == "FAILED":
 
@@ -1375,25 +1929,32 @@ def analyze_uploaded_file(
                                 "في معالجة الملف."
                             )
 
+
                         time.sleep(2)
+
 
                         gemini_file = (
                             client.files.get(
-                                name=gemini_file.name
+                                name=
+                                    gemini_file.name
                             )
                         )
+
 
                 response = (
                     client.models.generate_content(
 
-                        model=GEMINI_MODEL,
+                        model=
+                            GEMINI_MODEL,
 
                         contents=[
+
                             gemini_file,
+
                             prompt
                         ],
 
-                        config=
+                        config=(
                             types.GenerateContentConfig(
 
                                 system_instruction=
@@ -1402,8 +1963,10 @@ def analyze_uploaded_file(
                                 max_output_tokens=
                                     AI_MAX_OUTPUT_TOKENS
                             )
+                        )
                     )
                 )
+
 
                 return (
                     response.text
@@ -1411,17 +1974,49 @@ def analyze_uploaded_file(
                     "لم يرجع Gemini نتيجة."
                 )
 
+
             except Exception as e:
 
-                if (
-                    is_quota_error(e)
-                    and attempt < attempts - 1
-                ):
+                # ----------------------------------------------
+                # Invalid key
+                # ----------------------------------------------
 
-                    rotate_gemini_key()
-                    continue
+                if is_invalid_key_error(e):
+
+                    if (
+                        attempt
+                        < attempts - 1
+                    ):
+
+                        rotate_gemini_key()
+
+                        continue
+
+
+                    return (
+                        "❌ مفاتيح Gemini الموجودة "
+                        "غير صالحة.\n\n"
+                        "تأكد من قيمة "
+                        "`GEMINI_API_KEY` "
+                        "في Secrets."
+                    )
+
+
+                # ----------------------------------------------
+                # Quota
+                # ----------------------------------------------
 
                 if is_quota_error(e):
+
+                    if (
+                        attempt
+                        < attempts - 1
+                    ):
+
+                        rotate_gemini_key()
+
+                        continue
+
 
                     return (
                         "⚠️ انتهت حصة Gemini "
@@ -1429,18 +2024,29 @@ def analyze_uploaded_file(
                         "المفاتيح الموجودة."
                     )
 
+
+                # ----------------------------------------------
+                # Other error
+                # ----------------------------------------------
+
                 return (
                     "❌ حدث خطأ أثناء تحليل الملف.\n\n"
                     f"`{str(e)}`"
                 )
+
 
     finally:
 
         if temp_path:
 
             try:
-                os.unlink(temp_path)
+
+                os.unlink(
+                    temp_path
+                )
+
             except Exception:
+
                 pass
 
 
@@ -1451,11 +2057,17 @@ def analyze_uploaded_file(
 def logout():
 
     st.session_state.logged_in = False
+
     st.session_state.username = ""
+
     st.session_state.page = "chat"
+
     st.session_state.messages = []
+
     st.session_state.user_data = None
+
     st.session_state.all_chats = []
+
     st.session_state.current_chat = 0
 
     st.rerun()
@@ -1469,9 +2081,11 @@ payment = st.query_params.get(
     "payment"
 )
 
+
 session_id = st.query_params.get(
     "session_id"
 )
+
 
 if (
     payment == "success"
@@ -1480,20 +2094,26 @@ if (
 
     if (
         st.session_state.logged_in
-        and verify_payment(session_id)
+        and verify_payment(
+            session_id
+        )
     ):
 
         st.success(
-            "🎉 تم تأكيد الدفع وتفعيل الاشتراك."
+            "🎉 تم تأكيد الدفع "
+            "وتفعيل الاشتراك."
         )
 
+
     st.query_params.clear()
+
 
 elif payment == "cancelled":
 
     st.info(
         "تم إلغاء عملية الدفع."
     )
+
 
     st.query_params.clear()
 
@@ -1504,7 +2124,10 @@ elif payment == "cancelled":
 
 with st.sidebar:
 
-    st.title("🤖 Smart AI")
+    st.title(
+        "🤖 Smart AI"
+    )
+
 
     if st.session_state.logged_in:
 
@@ -1513,13 +2136,20 @@ with st.sidebar:
             == ADMIN_USERNAME
         )
 
+
         if is_admin:
-            st.success("👑 Admin — وصول كامل")
+
+            st.success(
+                "👑 Admin — وصول كامل"
+            )
+
         else:
+
             st.success(
                 "👤 "
                 + st.session_state.username
             )
+
 
         if st.button(
             "➕ محادثة جديدة",
@@ -1527,16 +2157,25 @@ with st.sidebar:
         ):
 
             create_new_chat()
-            st.session_state.page = "chat"
+
+            st.session_state.page = (
+                "chat"
+            )
+
             st.rerun()
+
 
         if st.button(
             "💬 المحادثة",
             use_container_width=True
         ):
 
-            st.session_state.page = "chat"
+            st.session_state.page = (
+                "chat"
+            )
+
             st.rerun()
+
 
         if not is_admin:
 
@@ -1545,8 +2184,12 @@ with st.sidebar:
                 use_container_width=True
             ):
 
-                st.session_state.page = "plans"
+                st.session_state.page = (
+                    "plans"
+                )
+
                 st.rerun()
+
 
         if is_admin:
 
@@ -1555,41 +2198,67 @@ with st.sidebar:
                 use_container_width=True
             ):
 
-                st.session_state.page = "admin"
+                st.session_state.page = (
+                    "admin"
+                )
+
                 st.rerun()
 
+
         st.divider()
+
 
         st.subheader(
             "🕘 المحادثات القديمة"
         )
+
 
         chats = st.session_state.get(
             "all_chats",
             []
         )
 
+
         if chats:
 
-            for index, chat in enumerate(chats):
+            for index, chat in enumerate(
+                chats
+            ):
 
                 title = chat.get(
                     "title",
                     "محادثة"
                 )
 
+
                 if len(title) > 30:
-                    title = title[:30] + "..."
+
+                    title = (
+                        title[:30]
+                        + "..."
+                    )
+
 
                 if st.button(
-                    "💬 " + title,
-                    key=f"old_chat_{index}",
+
+                    "💬 "
+                    + title,
+
+                    key=
+                        f"old_chat_{index}",
+
                     use_container_width=True
+
                 ):
 
                     open_chat(index)
-                    st.session_state.page = "chat"
+
+                    st.session_state.page = (
+                        "chat"
+                    )
+
                     st.rerun()
+
 
         else:
 
@@ -1597,7 +2266,9 @@ with st.sidebar:
                 "لا توجد محادثات محفوظة."
             )
 
+
         st.divider()
+
 
         if st.button(
             "🗑️ حذف المحادثة الحالية",
@@ -1605,7 +2276,9 @@ with st.sidebar:
         ):
 
             delete_current_chat()
+
             st.rerun()
+
 
         if st.button(
             "🚪 تسجيل الخروج",
@@ -1613,6 +2286,7 @@ with st.sidebar:
         ):
 
             logout()
+
 
     else:
 
@@ -1632,21 +2306,31 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True
     )
 
+
     st.title(
         "🤖 Smart AI Platform"
     )
+
 
     st.write(
         "منصة ذكاء اصطناعي للمحادثة "
         "وتحليل الصور والملفات والصوت والفيديو."
     )
 
-    login_tab, register_tab = st.tabs(
-        [
-            "🔑 تسجيل الدخول",
-            "✨ إنشاء حساب"
-        ]
+
+    login_tab, register_tab = (
+        st.tabs(
+            [
+                "🔑 تسجيل الدخول",
+                "✨ إنشاء حساب"
+            ]
+        )
     )
+
+
+    # =====================================================
+    # LOGIN
+    # =====================================================
 
     with login_tab:
 
@@ -1655,11 +2339,13 @@ if not st.session_state.logged_in:
             key="login_username"
         ).strip()
 
+
         password = st.text_input(
             "كلمة المرور",
             type="password",
             key="login_password"
         )
+
 
         if st.button(
             "دخول",
@@ -1667,20 +2353,40 @@ if not st.session_state.logged_in:
             use_container_width=True
         ):
 
+            # -------------------------------------------------
+            # ADMIN LOGIN
+            # -------------------------------------------------
+
             if (
                 username == ADMIN_USERNAME
-                and verify_admin_password(password)
+                and verify_admin_password(
+                    password
+                )
             ):
 
-                st.session_state.logged_in = True
-                st.session_state.username = ADMIN_USERNAME
+                st.session_state.logged_in = (
+                    True
+                )
+
+                st.session_state.username = (
+                    ADMIN_USERNAME
+                )
+
                 st.session_state.user_data = {
-                    "username": ADMIN_USERNAME,
-                    "subscription_status": "admin"
+
+                    "username":
+                        ADMIN_USERNAME,
+
+                    "subscription_status":
+                        "admin"
                 }
-                st.session_state.page = "admin"
+
+                st.session_state.page = (
+                    "admin"
+                )
 
                 st.rerun()
+
 
             else:
 
@@ -1688,13 +2394,17 @@ if not st.session_state.logged_in:
                     username
                 )
 
+
                 if error:
 
                     st.error(
                         "خطأ في الاتصال بـ Supabase"
                     )
 
-                    st.code(error)
+                    st.code(
+                        error
+                    )
+
 
                 elif (
                     user
@@ -1707,27 +2417,50 @@ if not st.session_state.logged_in:
                     )
                 ):
 
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.session_state.user_data = user
+                    st.session_state.logged_in = (
+                        True
+                    )
+
+                    st.session_state.username = (
+                        username
+                    )
+
+                    st.session_state.user_data = (
+                        user
+                    )
+
 
                     chats = load_chat_history(
                         user
                     )
 
+
                     if not chats:
 
                         chats = [{
-                            "title": "محادثة جديدة",
-                            "messages": [],
+
+                            "title":
+                                "محادثة جديدة",
+
+                            "messages":
+                                [],
+
                             "updated_at":
                                 datetime.now(
                                     timezone.utc
                                 ).isoformat()
                         }]
 
-                    st.session_state.all_chats = chats
-                    st.session_state.current_chat = len(chats) - 1
+
+                    st.session_state.all_chats = (
+                        chats
+                    )
+
+
+                    st.session_state.current_chat = (
+                        len(chats) - 1
+                    )
+
 
                     st.session_state.messages = (
                         chats[-1].get(
@@ -1736,15 +2469,26 @@ if not st.session_state.logged_in:
                         )
                     )
 
-                    st.session_state.page = "chat"
+
+                    st.session_state.page = (
+                        "chat"
+                    )
+
 
                     st.rerun()
+
 
                 else:
 
                     st.error(
-                        "❌ اسم المستخدم أو كلمة المرور غير صحيحة."
+                        "❌ اسم المستخدم "
+                        "أو كلمة المرور غير صحيحة."
                     )
+
+
+    # =====================================================
+    # REGISTER
+    # =====================================================
 
     with register_tab:
 
@@ -1753,11 +2497,13 @@ if not st.session_state.logged_in:
             key="register_username"
         ).strip()
 
+
         new_password = st.text_input(
             "كلمة المرور",
             type="password",
             key="register_password"
         )
+
 
         confirm_password = st.text_input(
             "تأكيد كلمة المرور",
@@ -1765,13 +2511,16 @@ if not st.session_state.logged_in:
             key="register_confirm"
         )
 
+
         if st.button(
             "إنشاء الحساب",
             type="primary",
             use_container_width=True
         ):
 
-            if not valid_username(new_username):
+            if not valid_username(
+                new_username
+            ):
 
                 st.warning(
                     "اسم المستخدم يجب أن يكون "
@@ -1779,18 +2528,26 @@ if not st.session_state.logged_in:
                     "الإنجليزية والأرقام و _ . -"
                 )
 
-            elif len(new_password) < 8:
+
+            elif len(
+                new_password
+            ) < 8:
 
                 st.warning(
                     "كلمة المرور يجب أن تكون "
                     "8 أحرف على الأقل."
                 )
 
-            elif new_password != confirm_password:
+
+            elif (
+                new_password
+                != confirm_password
+            ):
 
                 st.error(
                     "كلمتا المرور غير متطابقتين."
                 )
+
 
             elif (
                 new_username.lower()
@@ -1801,11 +2558,15 @@ if not st.session_state.logged_in:
                     "اسم المستخدم محجوز."
                 )
 
+
             else:
 
-                existing, error = get_user(
-                    new_username
+                existing, error = (
+                    get_user(
+                        new_username
+                    )
                 )
+
 
                 if error:
 
@@ -1813,7 +2574,10 @@ if not st.session_state.logged_in:
                         "خطأ في Supabase"
                     )
 
-                    st.code(error)
+                    st.code(
+                        error
+                    )
+
 
                 elif existing:
 
@@ -1821,12 +2585,16 @@ if not st.session_state.logged_in:
                         "اسم المستخدم موجود مسبقاً."
                     )
 
+
                 else:
 
-                    result, error = create_user(
-                        new_username,
-                        new_password
+                    result, error = (
+                        create_user(
+                            new_username,
+                            new_password
+                        )
                     )
+
 
                     if error:
 
@@ -1834,7 +2602,10 @@ if not st.session_state.logged_in:
                             "تعذر إنشاء الحساب."
                         )
 
-                        st.code(error)
+                        st.code(
+                            error
+                        )
+
 
                     else:
 
@@ -1843,13 +2614,16 @@ if not st.session_state.logged_in:
                         )
 
                         st.info(
-                            "لديك تجربة مجانية لمدة 7 أيام."
+                            "لديك تجربة مجانية "
+                            "لمدة 7 أيام."
                         )
+
 
     st.markdown(
         "</div>",
         unsafe_allow_html=True
     )
+
 
     st.stop()
 
@@ -1863,23 +2637,32 @@ is_admin = (
     == ADMIN_USERNAME
 )
 
+
 if (
     is_admin
-    and st.session_state.page == "admin"
+    and st.session_state.page
+    == "admin"
 ):
 
     st.title(
         "👑 لوحة الإدارة"
     )
 
+
     st.success(
-        "Admin لديه استخدام كامل بدون حد للرسائل أو رفع الملفات داخل التطبيق."
+        "Admin لديه استخدام كامل "
+        "بدون حد للرسائل أو رفع الملفات "
+        "داخل التطبيق."
     )
 
-    users, error = supabase_request(
-        "users_subscriptions",
-        "GET"
+
+    users, error = (
+        supabase_request(
+            "users_subscriptions",
+            "GET"
+        )
     )
+
 
     if error:
 
@@ -1887,93 +2670,136 @@ if (
             "خطأ في Supabase"
         )
 
-        st.code(error)
+        st.code(
+            error
+        )
 
         st.stop()
 
-    if not isinstance(users, list):
+
+    if not isinstance(
+        users,
+        list
+    ):
+
         users = []
+
 
     total = len(users)
 
+
     active = len([
+
         u for u in users
+
         if account_has_access(u)
     ])
 
+
     paid = len([
+
         u for u in users
+
         if u.get(
             "subscription_status"
         ) == "active"
     ])
 
+
     trials = len([
+
         u for u in users
+
         if (
+
             u.get(
                 "subscription_status"
             ) == "trial"
+
             and trial_is_active(u)
         )
     ])
 
-    c1, c2, c3, c4 = st.columns(4)
+
+    c1, c2, c3, c4 = (
+        st.columns(4)
+    )
+
 
     with c1:
+
         st.metric(
             "👥 المستخدمون",
             total
         )
 
+
     with c2:
+
         st.metric(
             "🟢 النشطون",
             active
         )
 
+
     with c3:
+
         st.metric(
             "💳 المدفوعون",
             paid
         )
 
+
     with c4:
+
         st.metric(
             "🎁 Trial",
             trials
         )
 
+
     st.divider()
+
 
     st.subheader(
         "👥 الحسابات"
     )
 
+
     display = []
+
 
     for user in users:
 
         display.append({
-            "ID": user.get("id"),
-            "Username": user.get("username"),
+
+            "ID":
+                user.get("id"),
+
+            "Username":
+                user.get("username"),
+
             "Status":
                 user.get(
                     "subscription_status"
                 ),
+
             "Trial End":
                 user.get(
                     "trial_end_date"
                 ),
+
             "Stripe":
                 user.get(
                     "stripe_customer_id"
                 ),
+
             "Created":
                 user.get(
                     "created_at"
                 )
         })
+
 
     if display:
 
@@ -1983,17 +2809,27 @@ if (
             hide_index=True
         )
 
+
     else:
 
         st.info(
             "لا توجد حسابات حتى الآن."
         )
 
+
     st.divider()
+
 
     st.subheader(
         "🧪 اختبار Gemini"
     )
+
+
+    st.write(
+        f"النموذج الحالي: "
+        f"`{GEMINI_MODEL}`"
+    )
+
 
     if st.button(
         "🔌 اختبار اتصال Gemini"
@@ -2005,43 +2841,85 @@ if (
                 gemini_error
             )
 
+
         else:
 
-            try:
+            attempts = len(
+                gemini_clients
+            )
 
-                response = (
-                    get_gemini_client()
-                    .models.generate_content(
+            success = False
 
-                        model=GEMINI_MODEL,
 
-                        contents=
-                            "Reply only with: Gemini OK",
+            for attempt in range(
+                attempts
+            ):
 
-                        config=
-                            types.GenerateContentConfig(
-                                max_output_tokens=20
+                try:
+
+                    response = (
+                        get_gemini_client()
+                        .models.generate_content(
+
+                            model=
+                                GEMINI_MODEL,
+
+                            contents=
+                                "Reply only with: Gemini OK",
+
+                            config=(
+                                types.GenerateContentConfig(
+
+                                    max_output_tokens=20
+                                )
                             )
+                        )
                     )
-                )
 
-                st.success(
-                    "✅ Gemini يعمل بنجاح."
-                )
 
-                st.write(
-                    response.text
-                )
+                    st.success(
+                        "✅ Gemini يعمل بنجاح."
+                    )
 
-            except Exception as e:
 
-                st.error(
-                    "❌ فشل اختبار Gemini."
-                )
+                    st.write(
+                        response.text
+                    )
 
-                st.code(
-                    str(e)
-                )
+
+                    success = True
+
+                    break
+
+
+                except Exception as e:
+
+                    if (
+                        is_invalid_key_error(e)
+                        or is_quota_error(e)
+                    ):
+
+                        if (
+                            attempt
+                            < attempts - 1
+                        ):
+
+                            rotate_gemini_key()
+
+                            continue
+
+
+                    st.error(
+                        "❌ فشل اختبار Gemini."
+                    )
+
+
+                    st.code(
+                        str(e)
+                    )
+
+                    break
+
 
     st.stop()
 
@@ -2050,17 +2928,25 @@ if (
 # 29. PLANS
 # =========================================================
 
-if st.session_state.page == "plans":
+if (
+    st.session_state.page
+    == "plans"
+):
 
     st.title(
         "💳 الاشتراك"
     )
 
+
     st.write(
         "اختر الاشتراك المناسب لك."
     )
 
-    col1, col2, col3 = st.columns(3)
+
+    col1, col2, col3 = (
+        st.columns(3)
+    )
+
 
     with col1:
 
@@ -2081,6 +2967,7 @@ if st.session_state.page == "plans":
             unsafe_allow_html=True
         )
 
+
     with col2:
 
         st.markdown(
@@ -2097,6 +2984,7 @@ if st.session_state.page == "plans":
             """,
             unsafe_allow_html=True
         )
+
 
     with col3:
 
@@ -2116,17 +3004,24 @@ if st.session_state.page == "plans":
             unsafe_allow_html=True
         )
 
+
     if st.button(
         "💳 اشترك الآن",
         type="primary",
         use_container_width=True
     ):
 
-        url, error = create_checkout()
+        url, error = (
+            create_checkout()
+        )
+
 
         if error:
 
-            st.error(error)
+            st.error(
+                error
+            )
+
 
         elif url:
 
@@ -2135,6 +3030,7 @@ if st.session_state.page == "plans":
                 url,
                 use_container_width=True
             )
+
 
     st.stop()
 
@@ -2145,11 +3041,15 @@ if st.session_state.page == "plans":
 
 current_user = None
 
+
 if not is_admin:
 
-    current_user, error = get_user(
-        st.session_state.username
+    current_user, error = (
+        get_user(
+            st.session_state.username
+        )
     )
+
 
     if error:
 
@@ -2157,11 +3057,17 @@ if not is_admin:
             "تعذر الاتصال بقاعدة البيانات."
         )
 
-        st.code(error)
+        st.code(
+            error
+        )
 
         st.stop()
 
-    st.session_state.user_data = current_user
+
+    st.session_state.user_data = (
+        current_user
+    )
+
 
     if not st.session_state.all_chats:
 
@@ -2169,19 +3075,33 @@ if not is_admin:
             current_user
         )
 
+
         if not chats:
 
             chats = [{
-                "title": "محادثة جديدة",
-                "messages": [],
+
+                "title":
+                    "محادثة جديدة",
+
+                "messages":
+                    [],
+
                 "updated_at":
                     datetime.now(
                         timezone.utc
                     ).isoformat()
             }]
 
-        st.session_state.all_chats = chats
-        st.session_state.current_chat = len(chats) - 1
+
+        st.session_state.all_chats = (
+            chats
+        )
+
+
+        st.session_state.current_chat = (
+            len(chats) - 1
+        )
+
 
         st.session_state.messages = (
             chats[-1].get(
@@ -2205,18 +3125,24 @@ if not is_admin:
             "🔒 انتهت صلاحية الوصول"
         )
 
+
         st.warning(
             "انتهت تجربتك المجانية "
             "أو لا يوجد اشتراك نشط."
         )
+
 
         if st.button(
             "💳 عرض الاشتراك",
             type="primary"
         ):
 
-            st.session_state.page = "plans"
+            st.session_state.page = (
+                "plans"
+            )
+
             st.rerun()
+
 
         st.stop()
 
@@ -2249,11 +3175,13 @@ if is_admin:
         "👑 Admin — استخدام كامل بدون حدود."
     )
 
+
 else:
 
     status = current_user.get(
         "subscription_status"
     )
+
 
     if status == "active":
 
@@ -2261,14 +3189,17 @@ else:
             "💳 اشتراكك نشط — الرسائل بدون حد."
         )
 
+
     else:
 
         remaining = days_left(
             current_user
         )
 
+
         st.info(
-            f"🎁 التجربة المجانية — متبقي {remaining} يوم."
+            "🎁 التجربة المجانية — "
+            f"متبقي {remaining} يوم."
         )
 
 
@@ -2281,28 +3212,35 @@ chats = st.session_state.get(
     []
 )
 
+
 current_index = (
     st.session_state.current_chat
 )
+
 
 if (
     chats
     and current_index < len(chats)
 ):
 
-    current_title = chats[
-        current_index
-    ].get(
-        "title",
-        "محادثة جديدة"
+    current_title = (
+        chats[current_index].get(
+            "title",
+            "محادثة جديدة"
+        )
     )
+
 
 else:
 
-    current_title = "محادثة جديدة"
+    current_title = (
+        "محادثة جديدة"
+    )
+
 
 st.caption(
-    "💬 " + current_title
+    "💬 "
+    + current_title
 )
 
 
@@ -2314,49 +3252,73 @@ st.subheader(
     "📎 الملفات والوسائط"
 )
 
+
 uploaded_file = st.file_uploader(
 
     "ارفع ملفاً لتحليله بواسطة Gemini",
 
     type=[
+
         "pdf",
+
         "txt",
+
         "csv",
+
         "docx",
+
         "jpg",
+
         "jpeg",
+
         "png",
+
         "webp",
+
         "mp3",
+
         "wav",
+
         "m4a",
+
         "mp4",
+
         "mov",
+
         "avi",
+
         "webm"
     ]
 )
 
+
 if uploaded_file:
 
     st.write(
-        f"📄 **الملف:** {uploaded_file.name}"
+        f"📄 **الملف:** "
+        f"{uploaded_file.name}"
     )
+
 
     st.write(
         f"📦 **الحجم:** "
         f"{uploaded_file.size / 1024 / 1024:.2f} MB"
     )
 
-    allowed, size_error = check_file_size(
-        uploaded_file
+
+    allowed, size_error = (
+        check_file_size(
+            uploaded_file
+        )
     )
+
 
     if not allowed:
 
         st.error(
             size_error
         )
+
 
     else:
 
@@ -2372,6 +3334,7 @@ if uploaded_file:
             key="file_prompt"
         )
 
+
         if st.button(
             "🤖 تحليل الملف",
             type="primary"
@@ -2381,14 +3344,18 @@ if uploaded_file:
                 "🤖 جاري التحليل..."
             ):
 
-                result = analyze_uploaded_file(
-                    uploaded_file,
-                    file_prompt
+                result = (
+                    analyze_uploaded_file(
+                        uploaded_file,
+                        file_prompt
+                    )
                 )
+
 
             st.markdown(
                 "### 🤖 النتيجة"
             )
+
 
             st.markdown(
                 result
@@ -2401,21 +3368,30 @@ if uploaded_file:
 
 st.divider()
 
-for message in st.session_state.messages:
+
+for message in (
+    st.session_state.messages
+):
 
     role = message.get(
         "role",
         "assistant"
     )
 
+
     content = message.get(
         "content",
         ""
     )
 
-    with st.chat_message(role):
 
-        st.markdown(content)
+    with st.chat_message(
+        role
+    ):
+
+        st.markdown(
+            content
+        )
 
 
 # =========================================================
@@ -2429,48 +3405,72 @@ user_input = st.chat_input(
     "اكتب سؤالك هنا..."
 )
 
+
 if user_input:
 
-    user_input = user_input.strip()
+    user_input = (
+        user_input.strip()
+    )
+
 
     if not user_input:
+
         st.stop()
+
 
     # -----------------------------------------------------
     # User message
     # -----------------------------------------------------
 
     st.session_state.messages.append({
-        "role": "user",
-        "content": user_input
+
+        "role":
+            "user",
+
+        "content":
+            user_input
     })
 
-    with st.chat_message("user"):
+
+    with st.chat_message(
+        "user"
+    ):
 
         st.markdown(
             user_input
         )
 
+
     # -----------------------------------------------------
     # AI response
     # -----------------------------------------------------
 
-    with st.chat_message("assistant"):
+    with st.chat_message(
+        "assistant"
+    ):
 
-        response = st.write_stream(
-            generate_ai_stream(
-                user_input
+        response = (
+            st.write_stream(
+                generate_ai_stream(
+                    user_input
+                )
             )
         )
+
 
     # -----------------------------------------------------
     # Save AI response
     # -----------------------------------------------------
 
     st.session_state.messages.append({
-        "role": "assistant",
-        "content": response
+
+        "role":
+            "assistant",
+
+        "content":
+            response
     })
+
 
     # -----------------------------------------------------
     # Save chat
@@ -2478,19 +3478,24 @@ if user_input:
 
     save_current_chat()
 
+
     # -----------------------------------------------------
     # Refresh user
     # -----------------------------------------------------
 
-    updated_user, _ = get_user(
-        st.session_state.username
+    updated_user, _ = (
+        get_user(
+            st.session_state.username
+        )
     )
+
 
     if updated_user:
 
         st.session_state.user_data = (
             updated_user
         )
+
 
         st.session_state.all_chats = (
             load_chat_history(
